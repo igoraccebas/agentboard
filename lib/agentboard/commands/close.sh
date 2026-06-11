@@ -107,40 +107,43 @@ _close_print_harvest_prompt() {
 
   cat <<EOF
 Before --confirm, distill this stream's contribution into project memory.
-For each category, append if applicable; skip if nothing to add.
+One command per durable insight — each becomes a small committed fact file
+(no merge conflicts, domain-scoped loading, prunable later):
 
 ${C_BOLD}1. GOTCHAS${C_RESET}  — any landmines discovered? (things that'll trip the next agent)
-   File:   .platform/memory/gotchas.md
-   Where:  between markers 'agentboard:gotchas:begin' and 'agentboard:gotchas:end'
-   Format: 🔴 [domain/file] — one-line gotcha (date or incident ref)
-           🔴 never-forget · 🟡 usually-matters · 🟢 minor
+   agentboard fact new --type gotcha --severity red|yellow|green \\
+     --domain <slug> --stream ${slug} --title "<one line>"
+   🔴 red = never-forget (always surfaced) · 🟡 yellow = usually-matters · 🟢 green = minor
 
 ${C_BOLD}2. PLAYBOOK${C_RESET} — any shortcut, command, or ritual worth recording?
-   File:   .platform/memory/playbook.md
-   Where:  between markers 'agentboard:playbook:begin' and 'agentboard:playbook:end'
-   Format: - **[area]** — practice (why/when)
+   agentboard fact new --type playbook --domain <slug> --stream ${slug} \\
+     --title "<practice>" --body "<why / when>"
 
 ${C_BOLD}3. OPEN QUESTIONS${C_RESET} — anything still unresolved?
-   File:   .platform/memory/open-questions.md
-   Add to: 'Active' section (between 'active:begin' / 'active:end' markers)
-   Format: - $(today) — [domain] question (context)
-   Also:   if this stream RESOLVED a prior Active question, move it to
-           'Resolved' with: → answer (stream: ${slug})
+   agentboard fact new --type question --domain <slug> --stream ${slug} --title "<question>"
+   If this stream RESOLVED a prior question fact, mark it superseded:
+   set 'status: superseded' in its file, then: agentboard fact reindex
 
 ${C_BOLD}4. DECISIONS${C_RESET} — locked-in architectural / product / tooling decisions?
-   File:   .platform/memory/decisions.md
-   Add row to the 'Locked decisions' table.
+   agentboard fact new --type decision --stream ${slug} \\
+     --title "<decision>" --body "<context + why>"
 
 ${C_BOLD}5. LEARNINGS${C_RESET} — non-obvious bug root-cause or hard-won pattern?
-   File:   .platform/memory/learnings.md
-   Add a new L-NNN block using the format at the top of that file.
+   agentboard fact new --type learning --domain <slug> --stream ${slug} \\
+     --title "<symptom → root cause>" --body "<fix + class of problem>"
+
+${C_BOLD}6. PRIVATE NOTES${C_RESET} — anything Claude learned off the record?
+   agentboard harvest        # lists auto-memory notes worth promoting
+
+Tip: a temporary workaround? Add --expires YYYY-MM-DD so \`fact prune\`
+flags it when it should die.
 
 When the harvest is done, run:
   ${C_BOLD}agentboard close ${slug} --confirm${C_RESET}
 
 Skipping harvest is fine if the stream produced nothing durable — but once
 the stream is archived, its raw context is no longer in active memory. The
-only knowledge that survives is what you distilled into the files above.
+only knowledge that survives is what you distilled into facts.
 EOF
   printf '\n'
 }

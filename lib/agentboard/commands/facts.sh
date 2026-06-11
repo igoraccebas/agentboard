@@ -227,6 +227,54 @@ _fact_reindex() {
   (( quiet )) || ok "Reindexed ${count} active fact(s) → ${FACTS_INDEX}"
 }
 
+# fact_validate_all — emit "E|message" / "W|message" lines for doctor.
+# Errors: structural problems that would mislead the next session.
+# Warnings: hygiene issues (unknown domain tags, stale index).
+fact_validate_all() {
+  local file fid ftype ftitle fstatus fsev fexpires d
+  [[ -d "$FACTS_DIR" ]] || return 0
+  for file in "$FACTS_DIR"/F-*.md; do
+    [[ -e "$file" ]] || continue
+    if ! has_frontmatter "$file"; then
+      printf 'E|fact %s has no frontmatter\n' "$file"
+      continue
+    fi
+    fid="$(frontmatter_value "$file" "fact_id")"
+    ftype="$(frontmatter_value "$file" "type")"
+    ftitle="$(frontmatter_value "$file" "title")"
+    fstatus="$(frontmatter_value "$file" "status")"
+    fsev="$(frontmatter_value "$file" "severity")"
+    fexpires="$(frontmatter_value "$file" "expires")"
+    [[ -n "$fid" ]]    || printf 'E|fact %s is missing fact_id\n' "$file"
+    [[ -n "$ftitle" ]] || printf 'E|fact %s is missing title\n' "$file"
+    if [[ -z "$ftype" ]] || ! _fact_valid_type "$ftype"; then
+      printf 'E|fact %s has invalid type: %s\n' "$file" "${ftype:-<empty>}"
+    fi
+    case "$fstatus" in
+      active|superseded|expired) ;;
+      *) printf 'E|fact %s has invalid status: %s\n' "$file" "${fstatus:-<empty>}" ;;
+    esac
+    if [[ "$ftype" == "gotcha" ]]; then
+      case "$fsev" in
+        red|yellow|green) ;;
+        *) printf 'E|fact %s (gotcha) has invalid severity: %s\n' "$file" "${fsev:-<empty>}" ;;
+      esac
+    fi
+    if [[ -n "$fexpires" && "$fexpires" != "—" ]] && \
+       [[ ! "$fexpires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+      printf 'E|fact %s has malformed expires date: %s\n' "$file" "$fexpires"
+    fi
+    while IFS= read -r d; do
+      [[ -z "$d" ]] && continue
+      [[ -f "./.platform/domains/${d}.md" ]] || \
+        printf 'W|fact %s references unknown domain: %s\n' "$file" "$d"
+    done < <(inline_array_items "$(frontmatter_value "$file" "domains")")
+  done
+  if ls "$FACTS_DIR"/F-*.md >/dev/null 2>&1 && [[ ! -f "$FACTS_INDEX" ]]; then
+    printf 'W|facts exist but INDEX.md is missing — run agentboard fact reindex\n'
+  fi
+}
+
 _fact_prune() {
   local apply=0
   while [[ $# -gt 0 ]]; do

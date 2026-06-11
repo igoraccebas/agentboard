@@ -449,6 +449,8 @@ EOF
     say
   fi
 
+  _handoff_relevant_facts "$stream_file" "$budget" "$running_tokens"
+
   local repo_scope=""
   repo_scope="$(inline_array_items "$(frontmatter_value "$stream_file" "repo_ids")")"
   while IFS= read -r domain_slug; do

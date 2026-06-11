@@ -37,8 +37,39 @@ EOF
 
   _brief_active_streams
   _brief_gotchas "$show_all"
+  _brief_facts "$show_all"
   _brief_open_questions "$show_all"
   _brief_usage_insight
+}
+
+# Facts scoped to today's work: red gotchas always; everything else only when
+# its domains intersect an open stream's domains. The full list stays in
+# INDEX.md — brief is the always-loaded surface, so it stays cheap.
+_brief_facts() {
+  local show_all="$1" limit=7
+  (( show_all )) && limit=99999
+  [[ -d "./.platform/memory/facts" ]] || return 0
+
+  local relevant rows
+  relevant="$(active_stream_domains)"
+  rows="$(facts_relevant_to_domains "$relevant")"
+  [[ -n "$rows" ]] || return 0
+
+  printf '%s📌 Facts in scope%s %s(full list: .platform/memory/INDEX.md)%s\n' \
+    "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
+  local printed=0 total=0 fid ftype ftitle fdomains fsev fstatus fexpires ffile
+  while IFS='|' read -r fid ftype ftitle fdomains fsev fstatus fexpires ffile; do
+    [[ -n "$fid" ]] || continue
+    total=$((total + 1))
+    (( printed < limit )) || continue
+    printf '   %s %s [%s] %s\n' "$fid" "$(_fact_severity_emoji "$fsev")" "$ftype" "$ftitle"
+    printed=$((printed + 1))
+  done <<< "$rows"
+  if (( printed < total )); then
+    printf '%s   ... %d more — `agentboard brief --all` or INDEX.md%s\n' \
+      "$C_DIM" $(( total - printed )) "$C_RESET"
+  fi
+  printf '\n'
 }
 
 _brief_active_streams() {

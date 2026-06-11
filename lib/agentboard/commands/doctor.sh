@@ -357,6 +357,21 @@ cmd_doctor() {
     fi
   fi
 
+  if [[ -d "./.platform/memory/facts" ]]; then
+    local fact_kind fact_msg fact_issues=0
+    while IFS='|' read -r fact_kind fact_msg; do
+      [[ -n "$fact_kind" ]] || continue
+      fact_issues=$((fact_issues + 1))
+      warn "$fact_msg"
+      if [[ "$fact_kind" == "E" ]]; then
+        errors=$((errors + 1))
+      else
+        warnings=$((warnings + 1))
+      fi
+    done < <(fact_validate_all)
+    (( fact_issues == 0 )) && ok "memory/facts validate (frontmatter, enums, domain refs)"
+  fi
+
   say
   if (( errors > 0 )); then
     printf '%s%sDoctor found issues%s\n' "$C_BOLD" "$C_RED" "$C_RESET"
