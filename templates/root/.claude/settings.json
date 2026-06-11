@@ -31,6 +31,17 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"./.platform/scripts/hooks/session-close.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }

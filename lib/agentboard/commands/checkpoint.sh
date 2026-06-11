@@ -3,11 +3,7 @@ cmd_checkpoint() {
 
   local slug="${1:-}"
   if [[ -z "$slug" || "${slug:0:2}" == "--" || "$slug" == "-h" ]]; then
-    if [[ "$slug" == "-h" || "$slug" == "--help" ]]; then
-      slug=""
-    else
-      die "Usage: agentboard checkpoint <stream-slug> --what \"...\" --next \"...\" [--blocker \"...\"] [--focus \"...\"] [--diff] [--dry-run]"
-    fi
+    slug=""
   else
     shift
   fi
@@ -15,7 +11,7 @@ cmd_checkpoint() {
     [[ "$slug" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "Stream slug must be kebab-case."
   fi
 
-  local what="" next_action="" blocker="" focus="" include_diff=0 dry_run=0
+  local what="" next_action="" blocker="" focus="" include_diff=0 dry_run=0 auto=0
   local explicit_blocker=0 explicit_focus=0
   local tokens_in="" tokens_out="" provider="" model="" complexity=""
   local cum_in="" cum_out=""
@@ -34,6 +30,7 @@ cmd_checkpoint() {
         [[ -n "${2:-}" ]] || die "checkpoint requires a value after --focus"
         focus="$2"; explicit_focus=1; shift 2 ;;
       --diff) include_diff=1; shift ;;
+      --auto) auto=1; shift ;;
       --dry-run) dry_run=1; shift ;;
       --tokens-in)
         [[ -n "${2:-}" ]] || die "checkpoint requires a value after --tokens-in"
@@ -72,6 +69,11 @@ Optional:
   --blocker "<text>"       Current blocker. Defaults to "none".
   --focus "<file:line|topic>"  What file/topic is in focus. Defaults to "—".
   --diff                   Also append `git diff --stat` to Progress log.
+  --auto                   Unattended mode (for session-end hooks): when the
+                           slug is omitted, targets the most recently updated
+                           open stream; derives --what from git state and
+                           keeps the previous next action. No-op when the
+                           tree is clean and nothing was committed today.
   --dry-run                Print what would change; don't write.
 
 Usage tracking (auto-log a token segment when provider + tokens given):
@@ -99,6 +101,19 @@ EOF
   [[ -z "$provider" ]] && provider="${AGENTBOARD_PROVIDER:-}"
   [[ -z "$model" ]] && model="${AGENTBOARD_MODEL:-}"
 
+  if (( auto )); then
+    if [[ -z "$slug" ]]; then
+      slug="$(_checkpoint_detect_stream)" || {
+        say "${C_DIM}auto-checkpoint: no active stream — nothing to do.${C_RESET}"
+        return 0
+      }
+    fi
+    _checkpoint_fill_auto_fields "$slug" || return 0
+  fi
+
+  if [[ -z "$slug" ]]; then
+    die "Usage: agentboard checkpoint <stream-slug> --what \"...\" --next \"...\" [--blocker \"...\"] [--focus \"...\"] [--diff] [--auto] [--dry-run]"
+  fi
   [[ -n "$what" ]] || die "checkpoint requires --what \"<1-2 lines>\""
   [[ -n "$next_action" ]] || die "checkpoint requires --next \"<one sentence>\""
 
@@ -176,6 +191,56 @@ EOF
   say "  ${C_DIM}Ready for handoff — run: agentboard handoff ${slug}${C_RESET}"
 
   _checkpoint_auto_log_usage "$slug" "$tokens_in" "$tokens_out" "$cum_in" "$cum_out" "$provider" "$model" "$complexity" "$what"
+}
+
+# Pick the stream an unattended checkpoint should target: the not-closed
+# stream with the newest updated_at. Returns 1 when no stream qualifies.
+_checkpoint_detect_stream() {
+  local file status updated best_file="" best_date=""
+  while IFS= read -r file; do
+    [[ -n "$file" ]] || continue
+    has_frontmatter "$file" || continue
+    status="$(frontmatter_value "$file" "status")"
+    case "$status" in done|archived|closed) continue ;; esac
+    updated="$(frontmatter_value "$file" "updated_at")"
+    [[ -n "$updated" ]] || updated="0000-00-00"
+    if [[ -z "$best_file" || "$updated" > "$best_date" ]]; then
+      best_file="$file"
+      best_date="$updated"
+    fi
+  done < <(stream_files)
+  [[ -n "$best_file" ]] || return 1
+  basename "$best_file" .md
+}
+
+# Derive --what/--next for an unattended checkpoint from git state. Sets the
+# caller's what/next_action (bash dynamic scope). Returns 1 when there is
+# nothing worth recording — callers (hooks) treat that as a clean no-op.
+_checkpoint_fill_auto_fields() {
+  local slug="$1" stream_file="./.platform/work/${slug}.md"
+  local dirty=0 commits_today=0 branch="" last_subject=""
+
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    dirty="$(git status --porcelain 2>/dev/null | grep -c . || true)"
+    commits_today="$(git log --since=midnight --oneline 2>/dev/null | grep -c . || true)"
+    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    last_subject="$(git log -1 --format=%s 2>/dev/null || true)"
+  fi
+
+  if (( dirty == 0 && commits_today == 0 )); then
+    say "${C_DIM}auto-checkpoint: working tree clean, no commits today — nothing to record.${C_RESET}"
+    return 1
+  fi
+
+  if [[ -z "$what" ]]; then
+    what="auto-checkpoint (${branch}): ${dirty} uncommitted file(s), ${commits_today} commit(s) today"
+    [[ -n "$last_subject" ]] && what="${what}; last commit: ${last_subject}"
+  fi
+  if [[ -z "$next_action" ]]; then
+    next_action="$([[ -f "$stream_file" ]] && stream_next_action "$stream_file" || true)"
+    [[ -n "$next_action" ]] || next_action="review auto-checkpoint and set the real next action"
+  fi
+  return 0
 }
 
 # Auto-log a usage segment when token counts + provider are provided.

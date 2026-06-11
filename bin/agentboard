@@ -36,6 +36,8 @@ source "$AGENTBOARD_ROOT/lib/agentboard/commands/progress.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/checkpoint.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/close.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/brief.sh"
+source "$AGENTBOARD_ROOT/lib/agentboard/commands/facts.sh"
+source "$AGENTBOARD_ROOT/lib/agentboard/commands/harvest.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/watch.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/install_hooks.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/system_setup.sh"
@@ -120,6 +122,8 @@ main() {
     checkpoint)  cmd_checkpoint "$@" ;;
     close)       cmd_close "$@" ;;
     brief)       cmd_brief "$@" ;;
+    fact)        cmd_fact "$@" ;;
+    harvest)     cmd_harvest "$@" ;;
     watch)       cmd_watch "$@" ;;
     install-hooks) cmd_install_hooks "$@" ;;
     status)      cmd_status "$@" ;;

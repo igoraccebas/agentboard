@@ -5,6 +5,17 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENTBOARD="$ROOT/bin/agentboard"
 
+
+# git < 2.28 has no `init -b`; fall back to pointing HEAD by hand so the
+# suite still runs on older stock-macOS git installs.
+git_init_branch() {
+  local dir="$1" branch="${2:-main}"
+  if ! git -C "$dir" init -b "$branch" >/dev/null 2>&1; then
+    git -C "$dir" init >/dev/null 2>&1
+    git -C "$dir" symbolic-ref HEAD "refs/heads/$branch" >/dev/null 2>&1
+  fi
+}
+
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
   exit 1
@@ -30,7 +41,7 @@ make_single_repo_fixture() {
   printf 'export const auth = true;\n' > "$dir/src/features/auth/index.ts"
   printf 'export const billing = true;\n' > "$dir/src/features/billing/index.ts"
   printf '{\n  "name": "single",\n  "scripts": {\n    "dev": "vite",\n    "test": "vitest",\n    "build": "vite build"\n  }\n}\n' > "$dir/package.json"
-  git -C "$dir" init -b feat-auth-session >/dev/null 2>&1
+  git_init_branch "$dir" feat-auth-session
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .
@@ -42,7 +53,7 @@ make_dirty_default_branch_fixture() {
   mkdir -p "$dir/src/features/auth"
   printf 'export const auth = true;\n' > "$dir/src/features/auth/index.ts"
   printf '{\n  "name": "dirty",\n  "scripts": {\n    "dev": "vite",\n    "test": "vitest",\n    "build": "vite build"\n  }\n}\n' > "$dir/package.json"
-  git -C "$dir" init -b main >/dev/null 2>&1
+  git_init_branch "$dir" main
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .
@@ -58,7 +69,7 @@ make_doc_artifact_fixture() {
   printf '# Decisions\n' > "$dir/decisions.md"
   printf 'openapi: 3.0.0\n' > "$dir/openapi.yaml"
   printf '{\n  "name": "doc-artifacts",\n  "scripts": {\n    "dev": "vite",\n    "test": "vitest",\n    "build": "vite build"\n  }\n}\n' > "$dir/package.json"
-  git -C "$dir" init -b main >/dev/null 2>&1
+  git_init_branch "$dir" main
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .
@@ -73,12 +84,12 @@ make_hub_fixture() {
   printf 'export const auth = true;\n' > "$dir/frontend/src/features/auth/index.ts"
   printf 'export const billing = true;\n' > "$dir/frontend/src/features/billing/index.ts"
   printf '{\n  "name": "frontend",\n  "dependencies": {\n    "react": "^19.0.0"\n  },\n  "scripts": {\n    "dev": "vite",\n    "test": "vitest",\n    "build": "vite build"\n  }\n}\n' > "$dir/frontend/package.json"
-  git -C "$dir/backend" init -b feat-auth-hardening >/dev/null 2>&1
+  git_init_branch "$dir/backend" feat-auth-hardening
   git -C "$dir/backend" config user.email test@example.com
   git -C "$dir/backend" config user.name "Agentboard Test"
   git -C "$dir/backend" add .
   git -C "$dir/backend" commit -m "initial" >/dev/null 2>&1
-  git -C "$dir/frontend" init -b fix-billing-bug >/dev/null 2>&1
+  git_init_branch "$dir/frontend" fix-billing-bug
   git -C "$dir/frontend" config user.email test@example.com
   git -C "$dir/frontend" config user.name "Agentboard Test"
   git -C "$dir/frontend" add .
@@ -90,7 +101,7 @@ make_unknown_repo_fixture() {
   mkdir -p "$dir/scripts"
   printf '#!/usr/bin/env bash\necho helper\n' > "$dir/scripts/helper.sh"
   chmod +x "$dir/scripts/helper.sh"
-  git -C "$dir" init -b main >/dev/null 2>&1
+  git_init_branch "$dir" main
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .
@@ -102,7 +113,7 @@ make_node_backend_fixture() {
   mkdir -p "$dir/src"
   printf '{\n  "name": "api-service",\n  "dependencies": {\n    "express": "^5.0.0"\n  },\n  "scripts": {\n    "start": "node src/server.js",\n    "test": "node --test",\n    "build": "tsup src/server.ts"\n  }\n}\n' > "$dir/package.json"
   printf 'console.log(\"ok\")\n' > "$dir/src/server.js"
-  git -C "$dir" init -b main >/dev/null 2>&1
+  git_init_branch "$dir" main
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .
@@ -113,7 +124,7 @@ make_ios_fixture() {
   local dir="$1"
   mkdir -p "$dir/App.xcodeproj" "$dir/ios"
   printf '// project placeholder\n' > "$dir/App.xcodeproj/project.pbxproj"
-  git -C "$dir" init -b main >/dev/null 2>&1
+  git_init_branch "$dir" main
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
   git -C "$dir" add .

@@ -46,9 +46,19 @@ assert_status() {
 
 make_git_repo() {
   local dir="$1" branch="${2:-main}"
-  git -C "$dir" init -b "$branch" >/dev/null 2>&1
+  git_init_branch "$dir" "$branch"
   git -C "$dir" config user.email test@example.com
   git -C "$dir" config user.name "Agentboard Test"
+}
+
+# git < 2.28 has no `init -b`; fall back to pointing HEAD by hand so the
+# suite still runs on older stock-macOS git installs.
+git_init_branch() {
+  local dir="$1" branch="${2:-main}"
+  if ! git -C "$dir" init -b "$branch" >/dev/null 2>&1; then
+    git -C "$dir" init >/dev/null 2>&1
+    git -C "$dir" symbolic-ref HEAD "refs/heads/$branch" >/dev/null 2>&1
+  fi
 }
 
 commit_all() {
