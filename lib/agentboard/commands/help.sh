@@ -62,20 +62,39 @@ COMMANDS
                              --blocker "<t>"   current blocker (default: none)
                              --focus "<t>"     file:line or topic in focus
                              --diff            also append git diff --stat
+                             --auto            unattended mode (used by the
+                                               SessionEnd hook): slug optional,
+                                               derives state from git, no-ops
+                                               on a clean tree
                              --dry-run         print changes without writing
                              --tokens-in N --tokens-out N --provider <p>
                              [--model <m>] [--complexity <c>]
                                                auto-log a usage segment
   close <stream-slug>        Finalize a stream. Two-step ritual:
                              1. bare run prints the harvest checklist —
-                                distill gotchas/playbook/questions/decisions
-                                into .platform memory files.
+                                distill gotchas/learnings/decisions into
+                                fact files via `agentboard fact new`.
                              2. --confirm archives the stream and logs closure.
                              --dry-run         preview --confirm actions
   brief                      Print the compact project briefing — active
-                             streams, recent gotchas, open questions,
-                             usage pattern. Read this at session start.
-                             --all             show all gotchas/questions
+                             streams, gotchas, facts in scope (domain-scoped),
+                             open questions, usage pattern. Read at session start.
+                             --all             show all gotchas/facts/questions
+  fact <sub>                 One-fact-per-file project memory (no merge
+                             conflicts, domain-scoped loading, prunable).
+                             new      — create a fact + reindex
+                               --type gotcha|learning|decision|playbook|question
+                               --title "<one line>" [--domain d]... [--stream s]
+                               [--severity red|yellow|green] [--body "<text>"]
+                               [--expires YYYY-MM-DD]
+                             list     — [--type t] [--domain d] [--status s|all]
+                             reindex  — regenerate .platform/memory/INDEX.md
+                             prune    — flag/expire facts past their date (--apply)
+  harvest                    Promote Claude Code's machine-local auto-memory
+                             notes into shared committed facts. Lists numbered
+                             candidates; nothing is written without --accept.
+                             --accept n,m  --all  --dry-run  --type <t>
+                             --domain <d>  --stream <s>  --source <dir>
   watch                      Background poller that auto-checkpoints when
                              ≥1 tracked file has changed since last poll.
                              Use during long Codex/Gemini sessions so state
@@ -85,10 +104,14 @@ COMMANDS
                              --stream <slug>   target stream (default: auto)
                              --once            single poll, then exit
                              --stop            stop the running watcher
-  install-hooks              Install Claude Code hook guards. Wires a
-                             PreToolUse hook that blocks git commit / push /
-                             reset --hard / rm -rf with an approval prompt.
+  install-hooks              Install hook guards. Claude Code gets PreToolUse
+                             (blocks git commit/push/reset --hard/rm -rf) and
+                             SessionEnd (auto-checkpoint on session close).
                              LLM cannot bypass. Safe on re-install.
+                             --git             also install the git pre-commit
+                                               fallback for Codex/Gemini: blocks
+                                               code commits when no open stream
+                                               was checkpointed today
                              --force           overwrite existing settings.json
                              --dry-run         preview without writing
   progress <stream-slug>     Append a git-diff summary to the stream's
@@ -113,6 +136,8 @@ COMMANDS
                              learn --apply — write rules to .platform/memory/learnings.md
                              dashboard     — visual bar-chart dashboard
                                [--today|--week|--month]
+                             impact        — is agentboard paying for itself?
+                               tokens per stream + per-task-type monthly trend
                              One entry = one context segment. Log at every
                              context clear, provider switch, or stream closure.
   version                    Print version

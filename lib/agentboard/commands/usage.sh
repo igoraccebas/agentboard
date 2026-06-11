@@ -610,8 +610,12 @@ cmd_usage() {
       printf '\n'
       ;;
 
+    impact)
+      cmd_usage_impact "$db"
+      ;;
+
     *)
-      die "Unknown usage subcommand: $sub. Options: summary | log | stream <slug> | history | optimize | learn [--apply] | dashboard [--today|--week|--month]"
+      die "Unknown usage subcommand: $sub. Options: summary | log | stream <slug> | history | optimize | learn [--apply] | dashboard [--today|--week|--month] | impact"
       ;;
   esac
 }

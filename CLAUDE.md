@@ -91,7 +91,7 @@ The single most important design decision:
 4. **Placeholders use `{{UPPERCASE_SNAKE}}`.** The only three the `init` command fills are `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, `{{TODAY}}`. Everything else is filled by the LLM during activation.
 5. **`sync-context.sh` must stay bash-portable.** macOS default shell must work. No bash 4-only features, no GNU-only flags.
 6. **No runtime dependencies.** Pure file-creation. No API calls, no npm install, no Python venv. If you want the LLM to do something, write it into the activation prompt — don't call an API from the CLI.
-7. **Max ~300 lines per file** (ship the rule by following it).
+7. **One complete idea per file** (ship the rule by following it). ~300 lines is the tripwire, not the limit: crossing it forces the question "is this still one idea?" — answer it in the PR. Never split a cohesive idea to satisfy a number. For markdown the LLM loads every session (brief output, INDEX.md, entry files): optimize the load path, not the file — always-loaded surfaces stay lean, depth lives in on-demand files. North star for both: fewer tokens to solve the same problem (`agentboard usage impact` measures it).
 
 ## Workflow for editing this repo
 

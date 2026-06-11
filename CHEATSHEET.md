@@ -92,6 +92,37 @@ agentboard progress <slug> [--base <b>] [--note "<text>"] [--dry-run]
 
 ---
 
+## Memory (facts, harvest, capture hooks)
+
+```bash
+# One fact per file under .platform/memory/facts/ + generated INDEX.md
+agentboard fact new --type gotcha --severity red --domain auth \
+  --stream login --title "session cookies need SameSite=Lax"
+agentboard fact new --type learning --title "..." --body "..."   # also: decision | playbook | question
+agentboard fact new --type gotcha --title "temp workaround" --expires 2026-09-01
+agentboard fact list [--type t] [--domain d] [--status all]
+agentboard fact reindex                  # regenerate INDEX.md
+agentboard fact prune                    # list facts past expiry
+agentboard fact prune --apply            # mark them expired + reindex (files kept)
+
+# Promote Claude Code's machine-local auto-memory into shared facts
+agentboard harvest                       # list candidates (writes nothing)
+agentboard harvest --accept 1,3 --type gotcha --domain auth
+agentboard harvest --all --dry-run
+
+# Capture that doesn't rely on obedience
+agentboard checkpoint --auto             # unattended: picks freshest open stream, derives state from git
+agentboard install-hooks                 # Claude Code: PreToolUse guard + SessionEnd auto-checkpoint
+agentboard install-hooks --git           # + pre-commit gate for Codex/Gemini (no commit w/o today's checkpoint)
+AGENTBOARD_SKIP_CHECKPOINT=1 git commit  # bypass the pre-commit gate once
+```
+
+Reading is domain-scoped: `brief` and `handoff` surface red gotchas always,
+other facts only when their domains intersect the active work. Full list:
+`.platform/memory/INDEX.md`.
+
+---
+
 ## Token usage tracking
 
 ### Log a segment (run before every context clear or provider switch)
@@ -125,6 +156,7 @@ agentboard usage dashboard --month   # last 30 days
 agentboard usage optimize            # most expensive task types and streams
 agentboard usage learn               # detect patterns (MODEL_OVERKILL, RESEARCH_BLOAT …)
 agentboard usage learn --apply       # write findings to .platform/memory/learnings.md
+agentboard usage impact              # is agentboard paying for itself? tokens/stream + monthly trend
 ```
 
 ### Direct SQLite queries

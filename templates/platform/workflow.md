@@ -77,7 +77,7 @@ State a 5–10 bullet plan **inline in chat**. Include:
 
 ### 5. Execute
 
-Write the code. Max ~300 lines per file. For specialist work, delegate to the appropriate skill from `repos.md`.
+Write the code. One complete idea per file: ~300 lines is the tripwire, not the limit — crossing it asks "is this still one idea, or did a second idea move in?" Split when the answer is two ideas; never split a cohesive idea just to satisfy a number. For specialist work, delegate to the appropriate skill from `repos.md`.
 
 > **⛔ Do NOT commit during Stage 5.** Code is written but never committed until Stage 6 passes and the user explicitly approves.
 
@@ -371,7 +371,7 @@ Repeat until the scorecard is all 🟢:
 ## Hard rules
 
 1. **No `.md` artifacts for plans.** Plans live in chat. Only write `.md` files when they're genuinely reusable (specs, docs, conventions). **`work/` stream files are the exception — they are mandatory operational state, not plan documents. Always create them (Stage 1b) before starting non-trivial work.**
-2. **Max ~300 lines per file.** Extract components before hitting the limit.
+2. **One complete idea per file (code).** ~300 lines is the tripwire that forces the question "is this still one idea?" — answer it in the PR instead of ignoring it. For context files the rule is different: **optimize the load path, not the file** — always-loaded surfaces (brief, INDEX.md, entry files) stay ruthlessly lean because they cost tokens every session; depth lives in on-demand files.
 3. **Trivial tasks skip to Stage 5.** Don't bureaucratize small work.
 4. **Parallelize subagents.** Never run independent subagents sequentially.
 5. **Every success logs one line.** `.platform/memory/log.md` is append-only, newest-on-top.

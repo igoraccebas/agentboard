@@ -79,7 +79,7 @@ Read the full diff. Do not skim. For large diffs, focus on:
 
 #### Axis 2: Code quality
 
-- [ ] **File size:** no file exceeds ~300 lines? If it does, is that pre-existing or new?
+- [ ] **File cohesion:** every file still one complete idea? Files crossing ~300 lines need the "one idea or two?" question answered in the PR (pre-existing offenders noted, not blocked).
 - [ ] **Function size:** no function over ~50 lines without a good reason?
 - [ ] **Naming:** names describe intent, not type (not `data`, `thing`, `tmp`)
 - [ ] **Duplication:** no copy-pasted blocks with 3+ identical lines — extract
@@ -173,7 +173,7 @@ Read the full diff. Do not skim. For large diffs, focus on:
 - **Secret in the diff.**
 - **Schema change without migration.**
 - **Breaking API change** without deprecation path.
-- **File over 300 lines** with new code added (without a split plan).
+- **File holding two ideas** with new code added (without a split plan). Crossing ~300 lines is the signal to check.
 
 ## Hard rules
 

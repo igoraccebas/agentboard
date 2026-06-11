@@ -97,8 +97,10 @@ the change through CI.
   — they are written for an AI agent to follow.
 - **No emojis** in templates or scripts. The existing files use plain
   ASCII and we want to keep terminal output predictable.
-- **File size**: aim for under ~300 lines per file. If a file is
-  getting unwieldy, split it before the PR.
+- **File size**: one complete idea per file. Crossing ~300 lines is
+  the tripwire to ask "is this still one idea?" — answer it in the PR.
+  Split files holding two ideas; don't split a cohesive idea to satisfy
+  the number.
 
 ## PR process
 

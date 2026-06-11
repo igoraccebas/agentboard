@@ -209,6 +209,46 @@ This is what makes work resumable after context compaction or handoff to another
 
 ---
 
+## Compounding memory
+
+Native AI-CLI memory (Claude Code auto-memory, Codex transcripts, Gemini
+checkpoints) is **per-machine and per-provider** — your teammate's agent and
+your other CLI never see it. Agentboard's memory layer is the opposite:
+small markdown files committed to the repo, readable by any LLM, shared
+through git.
+
+Four mechanisms make it compound instead of rot:
+
+**1. Facts — one per file.** `agentboard fact new` writes each gotcha,
+learning, decision, playbook entry, or open question as its own small file
+under `.platform/memory/facts/`, with a generated `INDEX.md`. Parallel
+sessions stop colliding in git (two sessions append two different files),
+and each fact carries domains, a source stream, and an optional expiry.
+
+**2. Capture that doesn't rely on obedience.** Claude Code gets a SessionEnd
+hook that auto-runs `agentboard checkpoint --auto` when a session ends — work
+state can't silently go stale. Codex and Gemini have no hook surface, so
+`agentboard install-hooks --git` installs a pre-commit fallback that blocks
+code commits when no open stream was checkpointed today
+(`AGENTBOARD_SKIP_CHECKPOINT=1` bypasses). Enforcement coverage is honest:
+runtime hooks on Claude, commit-time gate everywhere else.
+
+**3. Harvest — private notes become team truth.** Claude Code writes its own
+machine-local notes as you work. `agentboard harvest` lists the notes not yet
+in the shared binder and promotes the ones you accept into committed facts.
+Review before accepting — private notes can contain machine-specific detail.
+
+**4. Right-dose reading.** `brief` and `handoff` load facts scoped to the
+domains of the work at hand: red (never-forget) gotchas always surface;
+everything else only when its domain is active. `handoff --budget 8k` trims
+the pack to a token budget. The full list stays one `INDEX.md` away.
+
+And one honest meter: `agentboard usage impact` reports tokens-per-stream and
+the per-task-type monthly trend. If compounding memory works, the same kind of
+task gets cheaper over months. If it doesn't, this is where you find out.
+
+---
+
 ## Skills
 
 `agentboard init` installs a shared skill pack for all providers:
@@ -298,6 +338,11 @@ agentboard doctor
 agentboard new-domain <slug> [repo-id ...] [--repo <repo-id>]
 agentboard new-stream <slug> --domain <domain-slug> [--domain <domain-slug> ...] [--type feature] [--agent codex] [--repo repo-primary] [--repo <repo-id> ...]
 agentboard resolve <stream-slug|stream-id|domain-slug|domain-id|repo-id>
+agentboard fact new --type <gotcha|learning|decision|playbook|question> --title "..." [--domain <d>] [--stream <s>] [--severity red|yellow|green] [--expires YYYY-MM-DD]
+agentboard fact list [--type <t>] [--domain <d>] [--status <s>|all]
+agentboard fact reindex
+agentboard fact prune [--apply]
+agentboard harvest [--accept <n,m>|--all] [--type <t>] [--domain <d>] [--dry-run]
 agentboard handoff [stream-slug]
 agentboard progress <stream-slug> [--base <branch>] [--note "<text>"] [--dry-run]
 agentboard status
@@ -307,6 +352,7 @@ agentboard usage summary
 agentboard usage history
 agentboard usage stream <stream-slug>
 agentboard usage dashboard [--today|--week|--month]
+agentboard usage impact
 agentboard usage learn [--apply]
 agentboard version
 agentboard help

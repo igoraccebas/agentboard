@@ -48,7 +48,7 @@ Fill this table once with the skills you actually use. Delete rows for tech you 
 
 ## Hub rules (apply to every sibling repo)
 
-1. Max ~300 lines per file
+1. One complete idea per file (~300 lines = the "split?" tripwire, not a gate)
 2. No secrets in code, logs, or committed files
 3. Every tenant-scoped query filters by trusted context, not query params (if applicable)
 4. API response shape matches `conventions/api.md`

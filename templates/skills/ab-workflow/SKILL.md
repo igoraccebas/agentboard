@@ -98,7 +98,7 @@ Wait for user approval. If user pushes back, iterate. If user is silent and risk
 
 Write the code. Rules:
 - Atomic commits per logical chunk (don't pile 10 changes into 1 commit)
-- Max ~300 lines per file — extract before hitting the limit
+- One complete idea per file — ~300 lines is the tripwire to ask "still one idea?", not a hard gate
 - Read before you edit (every time — no exceptions)
 - For specialist work, delegate to the right skill from `.platform/repos.md` routing table
 - If you hit an obstacle, do not brute-force retry. Surface the obstacle to the user and ask.
@@ -128,7 +128,7 @@ One sentence of takeaway. Not a paragraph. Not a retrospective.
 4. **Trivial tasks skip Stages 2–4.**
 5. **Every success logs one line** to `.platform/memory/log.md`.
 6. **High-risk tasks require explicit user approval** between Stage 4 and Stage 5.
-7. **Max ~300 lines per file.**
+7. **One complete idea per file.** ~300 lines = the question "is this still one idea?", answered in the PR.
 
 ## Output format
 

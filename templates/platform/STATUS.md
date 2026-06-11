@@ -48,7 +48,7 @@ Things that will bite every new session if not flagged upfront.
 
 ## File size violations
 
-> Global rule: max ~300 lines per file. Track known offenders here so they get split before being added to.
+> Global rule: one complete idea per file (~300 lines = the "still one idea?" tripwire). Track known two-idea files here so they get split before being added to.
 
 - _None yet_
 
