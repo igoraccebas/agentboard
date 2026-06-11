@@ -59,3 +59,32 @@ test_update_skips_memory_placeholder_when_legacy_root_file_exists() {
 test_update_dry_run_leaves_files_unchanged
 test_update_replaces_process_files_but_keeps_learnings
 test_update_skips_memory_placeholder_when_legacy_root_file_exists
+
+test_update_installs_planner_agent_when_missing() {
+  local dir output
+  dir="$(mktemp -d)"
+  printf '{}\n' > "$dir/package.json"
+  init_project_fixture "$dir"
+  rm -f "$dir/.claude/agents/ab-planner.md"
+  run_cli_capture output "$dir" update
+  assert_status "$RUN_STATUS" 0
+  [[ -f "$dir/.claude/agents/ab-planner.md" ]] || fail "update did not install ab-planner.md"
+  # Customized agents are never overwritten
+  printf 'my custom planner\n' > "$dir/.claude/agents/ab-planner.md"
+  run_cli_capture output "$dir" update
+  assert_file_contains "$dir/.claude/agents/ab-planner.md" "my custom planner"
+}
+
+test_update_hints_migrate_memory_when_legacy_files_exist() {
+  local dir output
+  dir="$(mktemp -d)"
+  printf '{}\n' > "$dir/package.json"
+  init_project_fixture "$dir"
+  printf 'old gotchas\n' > "$dir/.platform/memory/gotchas.md"
+  run_cli_capture output "$dir" update
+  assert_status "$RUN_STATUS" 0
+  assert_contains "$output" "migrate-memory"
+}
+
+test_update_installs_planner_agent_when_missing
+test_update_hints_migrate_memory_when_legacy_files_exist

@@ -259,6 +259,32 @@ cmd_update() {
     fi
   fi
 
+  # .claude/agents/*.md — add-if-missing (e.g. ab-planner for the
+  # plan→approve→execute loop; user may have customized theirs)
+  if [[ -d "$TEMPLATES_ROOT/.claude/agents" ]]; then
+    local agent_src agent_name
+    for agent_src in "$TEMPLATES_ROOT/.claude/agents"/*.md; do
+      [[ -f "$agent_src" ]] || continue
+      agent_name="$(basename "$agent_src")"
+      if [[ -f "./.claude/agents/$agent_name" ]]; then
+        printf '  %s↷%s %s.claude/agents/%s%s  %s(exists — kept as-is)%s\n' \
+          "$C_YELLOW" "$C_RESET" "$C_CYAN" "$agent_name" "$C_RESET" "$C_DIM" "$C_RESET"
+        skipped=$((skipped + 1))
+      else
+        if (( dry_run )); then
+          printf '  %s+%s .claude/agents/%s  %s(would add)%s\n' \
+            "$C_GREEN" "$C_RESET" "$agent_name" "$C_DIM" "$C_RESET"
+        else
+          mkdir -p "./.claude/agents"
+          cp "$agent_src" "./.claude/agents/$agent_name"
+          printf '  %s+%s %s.claude/agents/%s%s  %s(new)%s\n' \
+            "$C_GREEN" "$C_RESET" "$C_CYAN" "$agent_name" "$C_RESET" "$C_DIM" "$C_RESET"
+        fi
+        added=$((added + 1))
+      fi
+    done
+  fi
+
   # -------------------------------------------------------------------------
   # Summary
   # -------------------------------------------------------------------------
@@ -281,6 +307,21 @@ cmd_update() {
     printf '  %sNever touched:%s architecture.md, decisions.md, log.md, STATUS*.md,\n' "$C_DIM" "$C_RESET"
     printf '  %s              repos.md, work/ACTIVE.md, work/BRIEF.md, work/*.md, domains/*.md%s\n' "$C_DIM" "$C_RESET"
     printf '  %s              %s(except domains/TEMPLATE.md)%s\n' "$C_DIM" "$C_YELLOW" "$C_RESET"
+
+    # Post-update next steps update can't do safely by itself
+    local hinted=0
+    if [[ -f "./.claude/settings.json" ]] && ! grep -q "session-close.sh" "./.claude/settings.json"; then
+      (( hinted )) || { say; printf '%sNext steps:%s\n' "$C_BOLD" "$C_RESET"; hinted=1; }
+      printf '  %s→%s your settings.json predates the SessionEnd auto-checkpoint hook —\n' "$C_CYAN" "$C_RESET"
+      printf '     run %sagentboard install-hooks --force%s (backup kept) and %s--git%s for the pre-commit gate\n' \
+        "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
+    fi
+    if [[ -f "./.platform/memory/gotchas.md" || -f "./.platform/memory/learnings.md" || \
+          -f "./.platform/memory/playbook.md" || -f "./.platform/memory/open-questions.md" ]]; then
+      (( hinted )) || { say; printf '%sNext steps:%s\n' "$C_BOLD" "$C_RESET"; hinted=1; }
+      printf '  %s→%s legacy memory files detected — run %sagentboard migrate-memory --apply%s to convert them to facts\n' \
+        "$C_CYAN" "$C_RESET" "$C_BOLD" "$C_RESET"
+    fi
   fi
   say
 }
