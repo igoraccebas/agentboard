@@ -369,6 +369,7 @@ agentboard handoff [stream-slug]
 agentboard approve <stream-slug> [--revoke]
 agentboard progress <stream-slug> [--base <branch>] [--note "<text>"] [--dry-run]
 agentboard status
+agentboard tui [--status <s>] [--owner <name>] [--interval N] [--once]
 agentboard add-repo <path>
 agentboard usage log --provider <name> --input <N> --output <N> [--model <M>] [--stream <S>] [--repo <R>] [--type <T>] [--note <text>]
 agentboard usage summary
@@ -396,6 +397,7 @@ agentboard help
 - `resolve` turns a canonical stream/domain/repo reference into the exact file or repo record to load
 - `handoff` prints the minimum file load order, repo scope, and current-state summary another LLM needs to resume a stream without a full re-brief
 - `progress` appends a git-diff summary (`git diff --stat <base>...HEAD`) to the stream's `## Progress log` section, stamped with timestamp and branch; use this instead of hand-typing what changed
+- `tui` renders a read-only auto-refreshing dashboard of all streams; `--once` for a single render
 - `status` prints `.platform/STATUS.md`
 - `add-repo` scaffolds entry files into a sibling repo in hub mode and refuses to overwrite existing root entry files
 - `usage log` records a token segment to `~/.agentboard/usage.db`; `usage summary/history/stream/dashboard/learn` aggregate and visualise the data — see `CHEATSHEET.md` for the full reference

@@ -76,6 +76,9 @@ agentboard close <slug> --confirm    # step 2: archive stream, log closure, set
 agentboard brief [--all]             # compact project briefing (session start):
                                      # active streams, recent gotchas, open
                                      # questions, top usage pattern.
+agentboard tui [--status <s>] [--owner <o>] [--once]
+                                     # read-only live dashboard of all streams
+                                     # (status colored, refreshes every 5s)
 agentboard watch [--interval 10] [--threshold 1] [--stream <slug>] [--once|--stop]
                                      # background poller. every N min, if any
                                      # tracked file changed via git status,

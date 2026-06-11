@@ -107,6 +107,13 @@ COMMANDS
                              candidates; nothing is written without --accept.
                              --accept n,m  --all  --dry-run  --type <t>
                              --domain <d>  --stream <s>  --source <dir>
+  tui                        Read-only dashboard of the stream registry:
+                             one colored row per stream (status | owner |
+                             updated | branch). Auto-refreshes; never writes.
+                             --status <s>      filter by status
+                             --owner <name>    filter by agent owner
+                             --interval N      refresh every N s (default 5)
+                             --once            single render, then exit
   watch                      Background poller that auto-checkpoints when
                              ≥1 tracked file has changed since last poll.
                              Use during long Codex/Gemini sessions so state
