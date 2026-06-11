@@ -33,32 +33,25 @@ test_update_replaces_process_files_but_keeps_learnings() {
 }
 
 test_update_skips_memory_placeholder_when_legacy_root_file_exists() {
-  # Guard: if a user has legacy .platform/learnings.md at root (pre-migration),
-  # `agentboard update` should NOT create an empty memory/learnings.md
+  # Guard: if a user has legacy .platform/BACKLOG.md at root (pre-migration),
+  # `agentboard update` should NOT create an empty memory/BACKLOG.md
   # placeholder — that would create a conflict for migrate-layout later.
   local dir output
   dir="$(mktemp -d)"
   printf '{}\n' > "$dir/package.json"
   init_project_fixture "$dir"
-  # Simulate pre-migration layout: move memory/learnings.md back to root
-  if [[ -f "$dir/.platform/memory/learnings.md" ]]; then
-    mv "$dir/.platform/memory/learnings.md" "$dir/.platform/learnings.md"
-    # Remove memory/ to reset
-    rm -f "$dir/.platform/memory/gotchas.md" \
-          "$dir/.platform/memory/playbook.md" \
-          "$dir/.platform/memory/open-questions.md" \
-          "$dir/.platform/memory/BACKLOG.md" \
-          "$dir/.platform/memory/decisions.md" \
-          "$dir/.platform/memory/log.md" 2>/dev/null || true
+  # Simulate pre-migration layout: move memory/BACKLOG.md back to root
+  if [[ -f "$dir/.platform/memory/BACKLOG.md" ]]; then
+    mv "$dir/.platform/memory/BACKLOG.md" "$dir/.platform/BACKLOG.md"
   fi
 
   run_cli_capture output "$dir" update
   assert_status "$RUN_STATUS" 0
   # Legacy root file preserved
-  [[ -f "$dir/.platform/learnings.md" ]] || fail "legacy learnings.md was deleted"
+  [[ -f "$dir/.platform/BACKLOG.md" ]] || fail "legacy BACKLOG.md was deleted"
   # No placeholder created (would collide with migrate-layout)
-  [[ ! -f "$dir/.platform/memory/learnings.md" ]] \
-    || fail "placeholder memory/learnings.md created despite legacy root file"
+  [[ ! -f "$dir/.platform/memory/BACKLOG.md" ]] \
+    || fail "placeholder memory/BACKLOG.md created despite legacy root file"
   # User is told to migrate first
   assert_contains "$output" "migrate-layout"
 }

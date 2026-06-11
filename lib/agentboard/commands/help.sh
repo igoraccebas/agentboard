@@ -24,7 +24,7 @@ COMMANDS
                              Replaces: workflow.md, ONBOARDING.md, ACTIVATE.md,
                                conventions/*.md, domains/TEMPLATE.md,
                                scripts/sync-context.sh
-                             Adds if missing: learnings.md, BACKLOG.md
+                             Adds if missing: BACKLOG.md, memory/INDEX.md
                              Never touches: architecture.md, decisions.md, log.md,
                                STATUS*.md, repos.md, work/*, domains/*
                                except domains/TEMPLATE.md
@@ -37,6 +37,9 @@ COMMANDS
                              .platform/memory/. Cleans up empty sessions/.
                              Default is --dry-run; pass --apply to perform.
   brief-upgrade [slug] ...   Rewrite legacy BRIEF.md for one target stream
+  migrate-memory [--apply]   Convert legacy category memory files (gotchas/
+                             playbook/open-questions/learnings) into facts;
+                             originals parked in memory/legacy/
   doctor                     Validate active .platform state and metadata
   new-domain <slug> ...      Create a domain file from the shared template
   new-stream <slug> ...      Create a stream file and register it in work/ACTIVE.md
@@ -72,8 +75,9 @@ COMMANDS
                                                auto-log a usage segment
   close <stream-slug>        Finalize a stream. Two-step ritual:
                              1. bare run prints the harvest checklist —
-                                distill gotchas/learnings/decisions into
-                                fact files via `agentboard fact new`.
+                                distill gotchas/learnings into facts via
+                                `agentboard fact new`; decisions go to
+                                memory/decisions.md (the registry).
                              2. --confirm archives the stream and logs closure.
                              --dry-run         preview --confirm actions
   brief                      Print the compact project briefing — active
@@ -83,7 +87,7 @@ COMMANDS
   fact <sub>                 One-fact-per-file project memory (no merge
                              conflicts, domain-scoped loading, prunable).
                              new      — create a fact + reindex
-                               --type gotcha|learning|decision|playbook|question
+                               --type gotcha|learning|playbook|question
                                --title "<one line>" [--domain d]... [--stream s]
                                [--severity red|yellow|green] [--body "<text>"]
                                [--expires YYYY-MM-DD]
@@ -133,7 +137,7 @@ COMMANDS
                              history       — last 20 segments
                              optimize      — most expensive streams/types/providers
                              learn         — detect inefficiencies and generate rules
-                             learn --apply — write rules to .platform/memory/learnings.md
+                             learn --apply — write rules as learning facts
                              dashboard     — visual bar-chart dashboard
                                [--today|--week|--month]
                              impact        — is agentboard paying for itself?

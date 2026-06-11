@@ -114,12 +114,13 @@ test_overwrites_unchanged_placeholder_in_memory() {
   setup_legacy_fixture "$dir"
   mkdir -p "$dir/.platform/memory"
   # Copy the shipped placeholder verbatim into memory/ to simulate `update`.
-  cp "$TEST_ROOT/templates/platform/memory/learnings.md" "$dir/.platform/memory/learnings.md"
+  # (BACKLOG.md — learnings/gotchas/etc. are no longer shipped; facts replaced them.)
+  cp "$TEST_ROOT/templates/platform/memory/BACKLOG.md" "$dir/.platform/memory/BACKLOG.md"
   run_cli_capture output "$dir" migrate-layout --apply
   assert_status "$RUN_STATUS" 0
   assert_contains "$output" "overwrote untouched placeholder"
-  [[ ! -f "$dir/.platform/learnings.md" ]] || fail "root learnings.md still present after overwrite"
-  assert_file_contains "$dir/.platform/memory/learnings.md" "old learnings content"
+  [[ ! -f "$dir/.platform/BACKLOG.md" ]] || fail "root BACKLOG.md still present after overwrite"
+  assert_file_contains "$dir/.platform/memory/BACKLOG.md" "old BACKLOG content"
 }
 
 test_rewrites_stale_refs_in_user_content() {

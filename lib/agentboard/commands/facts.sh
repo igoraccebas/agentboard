@@ -6,7 +6,9 @@
 
 FACTS_DIR="./.platform/memory/facts"
 FACTS_INDEX="./.platform/memory/INDEX.md"
-FACT_TYPES="gotcha learning decision playbook question"
+# Decisions are deliberately NOT a fact type — memory/decisions.md is the
+# curated registry with supersede semantics, seeded during activation.
+FACT_TYPES="gotcha learning playbook question"
 
 cmd_fact() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
@@ -31,7 +33,8 @@ Small files = no git merge conflicts between parallel sessions; the index
 keeps the always-loaded surface cheap.
 
 fact new --type <t> --title "..." [flags]
-  --type      gotcha | learning | decision | playbook | question
+  --type      gotcha | learning | playbook | question
+              (decisions go in memory/decisions.md — the curated registry)
   --title     One line. The index shows exactly this.
   --domain    Domain slug. Repeat for multiple. Default: []
   --stream    Source stream slug. Default: —
@@ -99,7 +102,7 @@ _fact_new() {
     esac
   done
 
-  [[ -n "$type" ]] || die "fact new requires --type (gotcha|learning|decision|playbook|question)"
+  [[ -n "$type" ]] || die "fact new requires --type (gotcha|learning|playbook|question)"
   _fact_valid_type "$type" || die "Invalid fact type: $type"
   [[ -n "$title" ]] || die "fact new requires --title \"<one line>\""
   title="${title//$'\n'/ }"

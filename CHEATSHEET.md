@@ -20,6 +20,7 @@ agentboard update [--dry-run]        # pull in newer shipped files (keeps projec
 agentboard sync [--apply|--list]     # sync AGENTS.md / GEMINI.md from CLAUDE.md
 agentboard bootstrap [--apply-domains]  # discover repos, suggest domains & streams
 agentboard migrate [--apply]         # upgrade legacy stream/domain files to v1 metadata
+agentboard migrate-memory [--apply]  # convert legacy gotchas/playbook/questions/learnings into facts
 agentboard brief-upgrade <slug> [--apply]  # rewrite legacy BRIEF.md to single-stream format
 agentboard doctor                    # validate .platform/ state, metadata, domain refs
 agentboard status                    # print .platform/STATUS.md
@@ -63,8 +64,8 @@ agentboard checkpoint <slug> --what "..." --next "..." [--blocker "..."] [--focu
                                      # counter). Agentboard computes the delta so
                                      # mid-session logging never double-counts.
 agentboard close <slug>              # step 1: print harvest checklist — distill
-                                     # gotchas/playbook/open-questions/decisions/
-                                     # learnings into .platform memory files.
+                                     # gotchas/playbook/questions/learnings into
+                                     # facts; decisions into memory/decisions.md.
 agentboard close <slug> --confirm    # step 2: archive stream, log closure, set
                                      # status=done. Run AFTER the harvest step.
 agentboard brief [--all]             # compact project briefing (session start):
@@ -98,7 +99,7 @@ agentboard progress <slug> [--base <b>] [--note "<text>"] [--dry-run]
 # One fact per file under .platform/memory/facts/ + generated INDEX.md
 agentboard fact new --type gotcha --severity red --domain auth \
   --stream login --title "session cookies need SameSite=Lax"
-agentboard fact new --type learning --title "..." --body "..."   # also: decision | playbook | question
+agentboard fact new --type learning --title "..." --body "..."   # also: playbook | question (decisions → memory/decisions.md)
 agentboard fact new --type gotcha --title "temp workaround" --expires 2026-09-01
 agentboard fact list [--type t] [--domain d] [--status all]
 agentboard fact reindex                  # regenerate INDEX.md
@@ -155,7 +156,7 @@ agentboard usage dashboard --week    # last 7 days
 agentboard usage dashboard --month   # last 30 days
 agentboard usage optimize            # most expensive task types and streams
 agentboard usage learn               # detect patterns (MODEL_OVERKILL, RESEARCH_BLOAT …)
-agentboard usage learn --apply       # write findings to .platform/memory/learnings.md
+agentboard usage learn --apply       # write findings as learning facts
 agentboard usage impact              # is agentboard paying for itself? tokens/stream + monthly trend
 ```
 

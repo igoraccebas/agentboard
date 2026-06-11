@@ -143,7 +143,7 @@ Before beginning any task estimated at Medium scope or larger:
 
 After enough data accumulates (5+ segments), patterns are detected automatically:
 
-| Pattern | What it means | What gets written to learnings.md |
+| Pattern | What it means | What gets written as a learning fact |
 |---|---|---|
 | **MODEL_OVERKILL** | Opus used for tasks averaging <20k tokens | "Use Sonnet for `<task_type>` tasks" |
 | **RESEARCH_BLOAT** | Research tasks averaging >60k tokens in a repo | "Enforce scoped context loading in `<repo>`" |
@@ -157,12 +157,12 @@ After enough data accumulates (5+ segments), patterns are detected automatically
 # Preview findings (no changes)
 agentboard usage learn
 
-# Write findings to .platform/memory/learnings.md (run from inside the project)
+# Write findings as learning facts in .platform/memory/facts/ (run from inside the project)
 agentboard usage learn --apply
 ```
 
 ### Your responsibility as an AI agent
 
-1. **At session start** — scan `.platform/memory/learnings.md` for any `[token-optimization]` entries. Apply them immediately to your behaviour for this session.
+1. **At session start** — scan `.platform/memory/INDEX.md` for any `[token-optimization]` facts. Apply them immediately to your behaviour for this session.
 2. **After 10+ streams** — suggest to the user: "Run `agentboard usage learn --apply` to write token optimizations to this project."
-3. **Honour the rules** — if learnings.md says "use Sonnet for research tasks", do not default to Opus regardless of the model you were invoked with. State the override: "Using Sonnet per token-optimization learning."
+3. **Honour the rules** — if a token-optimization fact says "use Sonnet for research tasks", do not default to Opus regardless of the model you were invoked with. State the override: "Using Sonnet per token-optimization learning."

@@ -220,7 +220,7 @@ through git.
 Four mechanisms make it compound instead of rot:
 
 **1. Facts — one per file.** `agentboard fact new` writes each gotcha,
-learning, decision, playbook entry, or open question as its own small file
+learning, playbook entry, or open question as its own small file
 under `.platform/memory/facts/`, with a generated `INDEX.md`. Parallel
 sessions stop colliding in git (two sessions append two different files),
 and each fact carries domains, a source stream, and an optional expiry.
@@ -333,12 +333,13 @@ agentboard update [--dry-run]
 agentboard sync [--apply|--list]
 agentboard bootstrap [--apply-domains]
 agentboard migrate [--apply]
+agentboard migrate-memory [--apply]
 agentboard brief-upgrade [stream-slug] [--apply]
 agentboard doctor
 agentboard new-domain <slug> [repo-id ...] [--repo <repo-id>]
 agentboard new-stream <slug> --domain <domain-slug> [--domain <domain-slug> ...] [--type feature] [--agent codex] [--repo repo-primary] [--repo <repo-id> ...]
 agentboard resolve <stream-slug|stream-id|domain-slug|domain-id|repo-id>
-agentboard fact new --type <gotcha|learning|decision|playbook|question> --title "..." [--domain <d>] [--stream <s>] [--severity red|yellow|green] [--expires YYYY-MM-DD]
+agentboard fact new --type <gotcha|learning|playbook|question> --title "..." [--domain <d>] [--stream <s>] [--severity red|yellow|green] [--expires YYYY-MM-DD]
 agentboard fact list [--type <t>] [--domain <d>] [--status <s>|all]
 agentboard fact reindex
 agentboard fact prune [--apply]

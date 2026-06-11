@@ -104,11 +104,10 @@ _brief_gotchas() {
   local show_all="$1" file="./.platform/memory/gotchas.md" limit=5
   (( show_all )) && limit=99999
 
-  printf '%s⚠️  Gotchas%s\n' "$C_BOLD" "$C_RESET"
-  if [[ ! -f "$file" ]]; then
-    printf '%s   (no gotchas.md yet — agentboard update will add it)%s\n\n' "$C_DIM" "$C_RESET"
-    return 0
-  fi
+  # Legacy surface: only projects that haven't run migrate-memory still have
+  # this file. New projects record gotchas as facts (shown in Facts in scope).
+  [[ -f "$file" ]] || return 0
+  printf '%s⚠️  Gotchas (legacy gotchas.md — run `agentboard migrate-memory`)%s\n' "$C_BOLD" "$C_RESET"
 
   local -a red=() yellow=() green=()
   local line
@@ -154,11 +153,9 @@ _brief_open_questions() {
   local show_all="$1" file="./.platform/memory/open-questions.md" limit=3
   (( show_all )) && limit=99999
 
-  printf '%s❓ Open questions%s\n' "$C_BOLD" "$C_RESET"
-  if [[ ! -f "$file" ]]; then
-    printf '%s   (no open-questions.md yet — agentboard update will add it)%s\n\n' "$C_DIM" "$C_RESET"
-    return 0
-  fi
+  # Legacy surface — question facts cover this for migrated/new projects.
+  [[ -f "$file" ]] || return 0
+  printf '%s❓ Open questions (legacy open-questions.md)%s\n' "$C_BOLD" "$C_RESET"
 
   local -a questions=()
   local line

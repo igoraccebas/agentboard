@@ -62,7 +62,7 @@ cmd_close() {
   _close_remove_from_active_registry "$slug"
 
   ok "Stream ${C_BOLD}${slug}${C_RESET} closed and archived → ${C_CYAN}${archive_path}${C_RESET}"
-  say "  ${C_DIM}If the harvest step (gotchas/playbook/questions) wasn't done before --confirm,${C_RESET}"
+  say "  ${C_DIM}If the harvest step (facts + decisions) wasn't done before --confirm,${C_RESET}"
   say "  ${C_DIM}those insights are now lost from project memory. Re-run without --confirm to see the checklist.${C_RESET}"
 }
 
@@ -125,8 +125,8 @@ ${C_BOLD}3. OPEN QUESTIONS${C_RESET} — anything still unresolved?
    set 'status: superseded' in its file, then: agentboard fact reindex
 
 ${C_BOLD}4. DECISIONS${C_RESET} — locked-in architectural / product / tooling decisions?
-   agentboard fact new --type decision --stream ${slug} \\
-     --title "<decision>" --body "<context + why>"
+   Add a row to .platform/memory/decisions.md ('Locked decisions' table) —
+   the registry keeps the why + supersede chain that one-liners lose.
 
 ${C_BOLD}5. LEARNINGS${C_RESET} — non-obvious bug root-cause or hard-won pattern?
    agentboard fact new --type learning --domain <slug> --stream ${slug} \\

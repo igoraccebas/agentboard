@@ -27,14 +27,15 @@ test_init_scaffolds_memory_files() {
   local dir
   dir="$(mktemp -d)"
   setup_brief_fixture "$dir"
-  [[ -f "$dir/.platform/memory/gotchas.md" ]] || fail "memory/gotchas.md not scaffolded by init"
-  [[ -f "$dir/.platform/memory/playbook.md" ]] || fail "memory/playbook.md not scaffolded by init"
-  [[ -f "$dir/.platform/memory/open-questions.md" ]] || fail "memory/open-questions.md not scaffolded by init"
   [[ -f "$dir/.platform/memory/decisions.md" ]] || fail "memory/decisions.md not scaffolded by init"
   [[ -f "$dir/.platform/memory/log.md" ]] || fail "memory/log.md not scaffolded by init"
-  assert_file_contains "$dir/.platform/memory/gotchas.md" "agentboard:gotchas:begin"
-  assert_file_contains "$dir/.platform/memory/playbook.md" "agentboard:playbook:begin"
-  assert_file_contains "$dir/.platform/memory/open-questions.md" "agentboard:open-questions:active:begin"
+  [[ -f "$dir/.platform/memory/BACKLOG.md" ]] || fail "memory/BACKLOG.md not scaffolded by init"
+  [[ -f "$dir/.platform/memory/INDEX.md" ]] || fail "memory/INDEX.md not scaffolded by init"
+  # Legacy category files are no longer shipped — facts replaced them
+  [[ ! -f "$dir/.platform/memory/gotchas.md" ]] || fail "legacy gotchas.md still scaffolded"
+  [[ ! -f "$dir/.platform/memory/playbook.md" ]] || fail "legacy playbook.md still scaffolded"
+  [[ ! -f "$dir/.platform/memory/open-questions.md" ]] || fail "legacy open-questions.md still scaffolded"
+  [[ ! -f "$dir/.platform/memory/learnings.md" ]] || fail "legacy learnings.md still scaffolded"
 }
 
 test_brief_shows_active_stream() {
@@ -51,25 +52,23 @@ test_brief_shows_active_stream() {
 }
 
 test_brief_shows_gotchas_when_present() {
+  # Pre-migration projects still have a legacy gotchas.md — brief must keep
+  # reading it until migrate-memory runs.
   local dir output
   dir="$(mktemp -d)"
   setup_brief_fixture "$dir"
-  # Insert a 🔴 gotcha between markers
-  python3 - "$dir/.platform/memory/gotchas.md" <<'PY'
-import sys, pathlib
-p = pathlib.Path(sys.argv[1])
-content = p.read_text()
-content = content.replace(
-    "<!-- agentboard:gotchas:begin -->",
-    "<!-- agentboard:gotchas:begin -->\n🔴 [auth] — never refactor middleware without running integration suite (mocks lie)",
-    1,
-)
-p.write_text(content)
-PY
+  cat > "$dir/.platform/memory/gotchas.md" <<'EOF'
+# Gotchas
+
+<!-- agentboard:gotchas:begin -->
+🔴 [auth] — never refactor middleware without running integration suite (mocks lie)
+<!-- agentboard:gotchas:end -->
+EOF
   run_cli_capture output "$dir" brief
   assert_status "$RUN_STATUS" 0
   assert_contains "$output" "Gotchas"
   assert_contains "$output" "never refactor middleware"
+  assert_contains "$output" "migrate-memory"
 }
 
 test_brief_reports_empty_state_gracefully() {
@@ -78,7 +77,10 @@ test_brief_reports_empty_state_gracefully() {
   setup_brief_fixture "$dir"
   run_cli_capture output "$dir" brief
   assert_status "$RUN_STATUS" 0
-  assert_contains "$output" "none yet"
+  assert_contains "$output" "Active streams"
+  # No legacy files and no facts yet: those sections stay silent, no errors
+  assert_not_contains "$output" "Gotchas"
+  assert_not_contains "$output" "Facts in scope"
 }
 
 test_brief_help() {

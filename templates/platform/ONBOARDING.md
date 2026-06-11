@@ -58,7 +58,7 @@ These are **big files**. Read only when your task is deep enough to need them.
 | Session history | `log.md` |
 | Per-repo deep reference | `{repo-slug}.md` (if multi-repo) |
 | Deferred issues / tech debt | `BACKLOG.md` — **do not load at session start**; read only when user asks or you are appending a new entry |
-| Bug post-mortems / hard-won patterns | `learnings.md` — **do not load at session start**; grep before diagnosing non-obvious bugs; append in Stage 6 when root cause was non-obvious |
+| Bug post-mortems / hard-won patterns | `memory/facts/` — INDEX.md is cheap and always loaded; grep the facts dir before diagnosing non-obvious bugs; write via `agentboard fact new` in Stage 6 |
 
 ## Step 5 — Execute
 
@@ -78,7 +78,7 @@ If the stream is fully complete, run the **Stream Closure Protocol** from `workf
 3. Update domain file + architecture.md if topology changed
 4. Unblock downstream streams in `ACTIVE.md`
 5. Archive stream file, reset `BRIEF.md`
-6. Append to `log.md`, check `learnings.md`
+6. Append to `log.md`, distill durable insights via `agentboard fact new`
 
 If the session is ending but the stream is NOT complete:
 - Append a progress note to the stream file (`## Current state` section)

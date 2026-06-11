@@ -144,7 +144,12 @@ Then **learn in three layers:**
 YYYY-MM-DD — <task> — <outcome> — <takeaway>
 ```
 
-**Layer 2 — Learnings (if bug was non-obvious):** if the root cause required >10 min to diagnose OR depended on internal behavior that isn't self-evident from the code, append an entry to `.platform/memory/learnings.md` using the L-NNN format:
+**Layer 2 — Learnings (if bug was non-obvious):** if the root cause required >10 min to diagnose OR depended on internal behavior that isn't self-evident from the code, record a learning fact:
+
+```bash
+agentboard fact new --type learning --domain <slug> --stream <slug> \
+  --title "<symptom> → <root cause>" --body "<fix + class of problem>"
+```
 ```
 ## L-NNN — <short title>
 Date: YYYY-MM-DD | Repo: <repo>
@@ -156,7 +161,7 @@ Class: <category — for grep>
 
 **Layer 3 — Memory (if architectural):** if the insight is a stable cross-session invariant (a new pattern, a recurring gotcha, an API contract), update `memory/MEMORY.md` or a topic file under `memory/`.
 
-**Bug investigation rule:** before diagnosing any non-obvious bug, grep `.platform/memory/learnings.md` for the symptom keyword first. Don't re-diagnose a known class of problem.
+**Bug investigation rule:** before diagnosing any non-obvious bug, grep `.platform/memory/facts/` for the symptom keyword first (and `memory/legacy/learnings.md` on pre-migration projects). Don't re-diagnose a known class of problem.
 
 **Exit:** task is done, recorded, and learned from.
 
@@ -182,7 +187,7 @@ Run this checklist **every time a stream reaches done** — before archiving the
 7. **Archive the stream file** — first check: does the stream file have `closure_approved: true`? If not, **STOP**. Do not archive. Ask the owner to set it. Only when `closure_approved: true` is present: move `work/<slug>.md` → `work/archive/<slug>.md`, remove from `ACTIVE.md`, reset `BRIEF.md`. **Remove the closed stream from `BRIEF.md` entirely — do NOT add a "Previously completed" section.** Completed work belongs in `log.md` only. `BRIEF.md` must only ever list active streams.
 8. **Log token usage** — run `agentboard usage log` to record the total token investment for this stream (aggregate from session reports).
 9. **Append to log.md** — one line: `YYYY-MM-DD — <stream> — <outcome> — <takeaway>`.
-10. **Learnings check** — any non-obvious bugs surfaced? Confirm they are in `learnings.md`. Add if missing.
+10. **Learnings check** — any non-obvious bugs surfaced? Confirm each has a learning fact (`agentboard fact list --type learning`). Add if missing.
 
 **Hard rule:** steps 2–5 are not optional. If a stream touched 3 repos, all 3 STATUS files get updated and all 3 deep-reference files get an explicit YES/NO decision. The next agent should be able to open any reference file and see a correct picture of the world.
 
