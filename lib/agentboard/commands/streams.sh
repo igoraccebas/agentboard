@@ -389,6 +389,20 @@ EOF
       "$C_YELLOW" "$C_RESET" "$C_YELLOW" "$_stream_updated" "$C_BOLD" "$slug" "$C_RESET$C_YELLOW" "$C_RESET"
   fi
 
+  # Plan→approve→execute gate: surface the Execution brief status so the
+  # resuming agent knows whether it may write code.
+  if grep -q '^## Execution brief' "$stream_file"; then
+    local _brief_ok
+    _brief_ok="$(frontmatter_value "$stream_file" "brief_approved")"
+    if [[ "$_brief_ok" == "true" ]]; then
+      printf '  brief:  %s✓ approved%s — execute WITHIN the ## Execution brief (its Do NOT lines are hard limits)\n' \
+        "$C_GREEN" "$C_RESET"
+    else
+      printf '  brief:  %s⛔ awaiting approval%s — do NOT write code; ask the user to run %sagentboard approve %s%s\n' \
+        "$C_RED" "$C_RESET" "$C_BOLD" "$slug" "$C_RESET"
+    fi
+  fi
+
   local _git_branch _base_branch
   _git_branch="$(frontmatter_value "$stream_file" "git_branch")"
   _base_branch="$(frontmatter_value "$stream_file" "base_branch")"

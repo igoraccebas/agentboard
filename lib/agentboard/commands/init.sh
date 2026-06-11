@@ -238,6 +238,23 @@ NOTICE
     cp "$settings_template" "$settings_target"
     ok "Wrote → $C_CYAN$target/.claude/settings.json$C_RESET (closure gate + session bootstrap hooks)"
   fi
+
+  # Install Claude Code agents (e.g. ab-planner pinned to a planning model).
+  # Additive: existing agents with the same name are kept.
+  if [[ -d "$TEMPLATES_ROOT/.claude/agents" ]]; then
+    local agent_src agent_dst
+    mkdir -p "$target/.claude/agents"
+    for agent_src in "$TEMPLATES_ROOT/.claude/agents"/*.md; do
+      [[ -f "$agent_src" ]] || continue
+      agent_dst="$target/.claude/agents/$(basename "$agent_src")"
+      if [[ -f "$agent_dst" ]]; then
+        printf '  %s↷%s Kept existing %s\n' "$C_YELLOW" "$C_RESET" "$agent_dst"
+      else
+        cp "$agent_src" "$agent_dst"
+        ok "Wrote → ${C_CYAN}${agent_dst}${C_RESET} (plan→approve→execute planner)"
+      fi
+    done
+  fi
   say
 
   # Install skills additively — never overwrite existing skills

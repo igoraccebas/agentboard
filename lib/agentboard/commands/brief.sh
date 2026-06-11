@@ -83,8 +83,13 @@ _brief_active_streams() {
     agent="$(frontmatter_value "$file" "agent_owner")"
     next="$(stream_next_action "$file")"
     [[ -z "$next" ]] && next="—"
-    rows+=("$(printf '   %s%s%s  (%s, %s)  → %s' \
-      "$C_BOLD" "$slug" "$C_RESET" "${status:-?}" "${agent:-?}" "$next")")
+    local gate=""
+    if grep -q '^## Execution brief' "$file" && \
+       [[ "$(frontmatter_value "$file" "brief_approved")" != "true" ]]; then
+      gate="  ${C_RED}⛔ brief awaiting approval${C_RESET}"
+    fi
+    rows+=("$(printf '   %s%s%s  (%s, %s)  → %s%s' \
+      "$C_BOLD" "$slug" "$C_RESET" "${status:-?}" "${agent:-?}" "$next" "$gate")")
     count=$((count + 1))
   done < <(stream_files)
 

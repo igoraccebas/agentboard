@@ -63,6 +63,11 @@ agentboard checkpoint <slug> --what "..." --next "..." [--blocker "..."] [--focu
                                      # session totals (e.g. Claude Code's context
                                      # counter). Agentboard computes the delta so
                                      # mid-session logging never double-counts.
+agentboard approve <slug>            # human gate: approve the ## Execution brief
+                                     # written by ab-planner (Opus) so the
+                                     # execution model may write code. In Claude
+                                     # Code this is a yes/no click (bash-guard).
+agentboard approve <slug> --revoke   # plan changed: stop execution, re-plan
 agentboard close <slug>              # step 1: print harvest checklist — distill
                                      # gotchas/playbook/questions/learnings into
                                      # facts; decisions into memory/decisions.md.

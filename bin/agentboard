@@ -36,6 +36,7 @@ source "$AGENTBOARD_ROOT/lib/agentboard/commands/streams.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/progress.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/checkpoint.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/close.sh"
+source "$AGENTBOARD_ROOT/lib/agentboard/commands/approve.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/brief.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/facts.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/harvest.sh"
@@ -124,6 +125,7 @@ main() {
     progress)    cmd_progress "$@" ;;
     checkpoint)  cmd_checkpoint "$@" ;;
     close)       cmd_close "$@" ;;
+    approve)     cmd_approve "$@" ;;
     brief)       cmd_brief "$@" ;;
     fact)        cmd_fact "$@" ;;
     harvest)     cmd_harvest "$@" ;;

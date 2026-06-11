@@ -368,6 +368,26 @@ replace_frontmatter_line() {
   rm -f "${file}.bak"
 }
 
+# set_frontmatter_value <file> <key> <value>
+# Replace the key when present; insert it before the closing --- when absent.
+set_frontmatter_value() {
+  local file="$1" key="$2" value="$3"
+  if grep -qE "^${key}:" "$file"; then
+    replace_frontmatter_line "$file" "$key" "$value"
+    return 0
+  fi
+  local tmp; tmp="$(mktemp)"
+  awk -v kv="${key}: ${value}" '
+    BEGIN { seen = 0; in_fm = 0 }
+    /^---[[:space:]]*$/ {
+      if (!seen) { seen = 1; in_fm = 1; print; next }
+      if (in_fm) { print kv; in_fm = 0; print; next }
+    }
+    { print }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
 unique_nonempty_lines() {
   awk 'NF && !seen[$0]++'
 }

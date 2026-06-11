@@ -387,15 +387,40 @@ Repeat until the scorecard is all 🟢:
 
 ---
 
-## Model profile hint (Claude Code, optional)
+## Model routing (Claude Code, optional)
 
-| Scope | Suggested profile |
-|---|---|
-| Trivial | Haiku / cheapest |
-| Small | Sonnet / balanced |
-| Medium | Sonnet / balanced |
-| Large | Opus / quality |
-| High-risk | Opus / quality |
+Route by job, not by habit — the strongest executor is not the cheapest
+planner, and vice versa:
+
+| Job | Suggested model | Why |
+|---|---|---|
+| Plan / research (medium+ scope) | Opus-class (e.g. Opus 4.8) | Writes the Execution brief; strong reasoning, cheaper per token than the executor |
+| Code execution | Strongest coder (e.g. Fable 5) | Executes the approved brief; pricier per token but finishes in fewer turns |
+| Read-only analysis subagents | Sonnet-class | Analysis is read-only — never burn executor tokens on it |
+| Trivial file ops | Haiku / cheapest | No reasoning needed |
+
+Verify the routing with data: log `--model` at every checkpoint and read
+`agentboard usage impact` monthly — if a task type isn't getting cheaper,
+the routing (or the memory) isn't working.
+
+## The plan→approve→execute gate (optional, per stream)
+
+For medium+ scope work, split planning from execution across models with a
+human gate between them:
+
+1. **Plan** — the `ab-planner` agent (pinned to the planning model) researches
+   the codebase and writes an `## Execution brief` into the stream file:
+   objective, Do / Do NOT lines, files in scope, acceptance criteria. It sets
+   `brief_approved: false` and never writes code.
+2. **Approve** — a human reviews the brief and runs
+   `agentboard approve <slug>`. In Claude Code the bash-guard turns this into
+   a yes/no click — the LLM cannot self-approve.
+3. **Execute** — the execution model implements strictly within the brief.
+   `agentboard handoff` shows the gate status (⛔ awaiting / ✓ approved); an
+   unapproved brief means: do not write code, ask the user.
+
+Streams without an Execution brief are not gated — trivial work flows
+untouched. Re-plan? `agentboard approve <slug> --revoke`, edit, re-approve.
 
 ---
 

@@ -26,10 +26,12 @@ fi
 # command string appears raw in any JSON encoding, so escape rules don't
 # interfere with substring detection. Overmatching (e.g. a command that echoes
 # "git commit") is acceptable: extra click vs. lost work is the right tradeoff.
-DESTRUCTIVE_RE='git[[:space:]]+(commit|push|reset[[:space:]]+--hard|checkout[[:space:]]+--|branch[[:space:]]+-D)|rm[[:space:]]+-[rfRF]+|git[[:space:]]+push[[:space:]]+--force'
+# `agentboard approve` is in the list for a different reason: the approval
+# click in Claude Code IS the human gate of the plan->approve->execute loop.
+DESTRUCTIVE_RE='git[[:space:]]+(commit|push|reset[[:space:]]+--hard|checkout[[:space:]]+--|branch[[:space:]]+-D)|rm[[:space:]]+-[rfRF]+|git[[:space:]]+push[[:space:]]+--force|agentboard[[:space:]]+approve'
 
 if printf '%s' "$INPUT" | grep -qE "$DESTRUCTIVE_RE"; then
-  reason='Agentboard guard: destructive command requires user approval.'
+  reason='Agentboard guard: this command requires user approval (your click IS the approval).'
   # Emit a compact permission decision. Claude Code shows the approval UI.
   printf '{"permissionDecision":"ask","permissionDecisionReason":"%s"}\n' "$reason"
 fi

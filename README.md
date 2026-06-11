@@ -249,6 +249,27 @@ task gets cheaper over months. If it doesn't, this is where you find out.
 
 ---
 
+## Plan → approve → execute (split-model workflow)
+
+Strong execution models are expensive per token; strong planning models are
+cheaper. Agentboard ships an opt-in gate that splits the work:
+
+1. **Plan** — the shipped `ab-planner` Claude Code agent (pinned to a
+   planning model like Opus) researches the repo and writes an
+   `## Execution brief` into the stream file: objective, Do / Do NOT lines,
+   files in scope, acceptance criteria. It never writes code.
+2. **Approve** — a human runs `agentboard approve <slug>`. In Claude Code
+   the bash-guard intercepts the command, so approval is a yes/no click in
+   the session — the LLM cannot approve its own plan.
+3. **Execute** — the execution model (e.g. Fable 5) implements within the
+   brief. `handoff` and `brief` show the gate status to every resuming
+   agent; an unapproved brief reads as "do not write code".
+
+The gate exists only on streams that have a brief — trivial work is never
+taxed. `usage impact` tells you whether the split actually saves tokens.
+
+---
+
 ## Skills
 
 `agentboard init` installs a shared skill pack for all providers:
@@ -345,6 +366,7 @@ agentboard fact reindex
 agentboard fact prune [--apply]
 agentboard harvest [--accept <n,m>|--all] [--type <t>] [--domain <d>] [--dry-run]
 agentboard handoff [stream-slug]
+agentboard approve <stream-slug> [--revoke]
 agentboard progress <stream-slug> [--base <branch>] [--note "<text>"] [--dry-run]
 agentboard status
 agentboard add-repo <path>

@@ -73,6 +73,14 @@ COMMANDS
                              --tokens-in N --tokens-out N --provider <p>
                              [--model <m>] [--complexity <c>]
                                                auto-log a usage segment
+  approve <stream-slug>      Human gate of the plan→approve→execute loop.
+                             The ab-planner agent (Opus) writes an
+                             ## Execution brief into the stream file; this
+                             command flips brief_approved: true so the
+                             execution model (e.g. Fable 5) may write code.
+                             In Claude Code the bash-guard turns it into a
+                             yes/no click — the LLM cannot self-approve.
+                             --revoke          plan changed: stop execution
   close <stream-slug>        Finalize a stream. Two-step ritual:
                              1. bare run prints the harvest checklist —
                                 distill gotchas/learnings into facts via
