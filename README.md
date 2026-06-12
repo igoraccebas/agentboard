@@ -261,9 +261,9 @@ cheaper. Agentboard ships an opt-in gate that splits the work:
 2. **Approve** — a human runs `agentboard approve <slug>`. In Claude Code
    the bash-guard intercepts the command, so approval is a yes/no click in
    the session — the LLM cannot approve its own plan.
-3. **Execute** — the execution model (e.g. Fable 5) implements within the
-   brief. `handoff` and `brief` show the gate status to every resuming
-   agent; an unapproved brief reads as "do not write code".
+3. **Execute** — the execution model (your strongest available coder)
+   implements within the brief. `handoff` and `brief` show the gate status
+   to every resuming agent; an unapproved brief reads as "do not write code".
 
 The gate exists only on streams that have a brief — trivial work is never
 taxed. `usage impact` tells you whether the split actually saves tokens.

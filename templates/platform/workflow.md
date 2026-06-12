@@ -405,7 +405,7 @@ planner, and vice versa:
 |---|---|---|
 | Research (medium+ scope) | Codex via `agentboard research` | Codebase/web reading is volume work — route it to the cheapest capable reader; findings anchor in `## Research notes` |
 | Plan (medium+ scope) | Opus-class (e.g. Opus 4.8) | Writes the Execution brief (consuming `## Research notes` when present); the brief is the contract — don't cheap out on judgment |
-| Code execution | Strongest coder (e.g. Fable 5) | Executes the approved brief; pricier per token but finishes in fewer turns |
+| Code execution | Strongest coder available (e.g. Fable 5; Opus-class when it's not the session model or unavailable) | Executes the approved brief; pricier per token but finishes in fewer turns |
 | Read-only analysis subagents | Sonnet-class | Analysis is read-only — never burn executor tokens on it |
 | Trivial file ops | Haiku / cheapest | No reasoning needed |
 
