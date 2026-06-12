@@ -42,6 +42,7 @@ source "$AGENTBOARD_ROOT/lib/agentboard/commands/facts.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/harvest.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/watch.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/tui.sh"
+source "$AGENTBOARD_ROOT/lib/agentboard/commands/research.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/install_hooks.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/system_setup.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/commands/update.sh"
@@ -132,6 +133,7 @@ main() {
     harvest)     cmd_harvest "$@" ;;
     watch)       cmd_watch "$@" ;;
     tui)         cmd_tui "$@" ;;
+    research)    cmd_research "$@" ;;
     install-hooks) cmd_install_hooks "$@" ;;
     status)      cmd_status "$@" ;;
     add-repo)    cmd_add_repo "$@" ;;

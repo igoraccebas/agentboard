@@ -79,6 +79,11 @@ agentboard brief [--all]             # compact project briefing (session start):
 agentboard tui [--status <s>] [--owner <o>] [--once]
                                      # read-only live dashboard of all streams
                                      # (status colored, refreshes every 5s)
+agentboard research <slug> "<q>" [--web] [--dry-run]
+                                     # delegate research to local Codex CLI
+                                     # (read-only, live output); findings append
+                                     # to the stream's ## Research notes.
+                                     # optional — needs codex on PATH.
 agentboard watch [--interval 10] [--threshold 1] [--stream <slug>] [--once|--stop]
                                      # background poller. every N min, if any
                                      # tracked file changed via git status,

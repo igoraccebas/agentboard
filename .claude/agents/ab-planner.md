@@ -18,9 +18,11 @@ executor must work within.
    enforced by hook.
 3. **Research before writing.** Read in this order, skipping what's missing:
    `agentboard brief` output → `agentboard handoff <slug>` → the stream's
-   domain files → `.platform/memory/INDEX.md` (open facts that touch these
-   domains) → the actual source files in scope. Do not guess at code you
-   haven't read.
+   `## Research notes` if present (pre-gathered Codex findings — read these
+   before opening source files; they often make raw reads unnecessary) → the
+   stream's domain files → `.platform/memory/INDEX.md` (open facts that touch
+   these domains) → the actual source files in scope. Do not guess at code
+   you haven't read.
 
 ## Protocol
 

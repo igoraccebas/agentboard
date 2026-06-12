@@ -114,6 +114,16 @@ COMMANDS
                              --owner <name>    filter by agent owner
                              --interval N      refresh every N s (default 5)
                              --once            single render, then exit
+  research <slug> "<q>"      Delegate research to the local Codex CLI
+                             (read-only, headless). Activity streams live;
+                             findings append to the stream's
+                             ## Research notes. Optional — needs codex
+                             on PATH (or AGENTBOARD_CODEX_BIN).
+                             --web             enable Codex web search
+                             --model <m>       override Codex model
+                             --profile <p>     ~/.codex config profile
+                                               (none by default)
+                             --dry-run         print argv, invoke nothing
   watch                      Background poller that auto-checkpoints when
                              ≥1 tracked file has changed since last poll.
                              Use during long Codex/Gemini sessions so state

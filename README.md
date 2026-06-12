@@ -370,6 +370,7 @@ agentboard approve <stream-slug> [--revoke]
 agentboard progress <stream-slug> [--base <branch>] [--note "<text>"] [--dry-run]
 agentboard status
 agentboard tui [--status <s>] [--owner <name>] [--interval N] [--once]
+agentboard research <stream-slug> "<question>" [--web] [--model <m>] [--profile <p>] [--dry-run]
 agentboard add-repo <path>
 agentboard usage log --provider <name> --input <N> --output <N> [--model <M>] [--stream <S>] [--repo <R>] [--type <T>] [--note <text>]
 agentboard usage summary
@@ -398,6 +399,7 @@ agentboard help
 - `handoff` prints the minimum file load order, repo scope, and current-state summary another LLM needs to resume a stream without a full re-brief
 - `progress` appends a git-diff summary (`git diff --stat <base>...HEAD`) to the stream's `## Progress log` section, stamped with timestamp and branch; use this instead of hand-typing what changed
 - `tui` renders a read-only auto-refreshing dashboard of all streams; `--once` for a single render
+- `research` delegates the research phase to a locally-installed Codex CLI (read-only, headless): activity streams live to the terminal, final findings append as a dated block under the stream's `## Research notes`; `--web` enables Codex web search. Optional — requires `codex` on PATH (or `AGENTBOARD_CODEX_BIN`); no other command depends on it. Agent-invoked by design: sessions run it at the Research stage, humans rarely type it
 - `status` prints `.platform/STATUS.md`
 - `add-repo` scaffolds entry files into a sibling repo in hub mode and refuses to overwrite existing root entry files
 - `usage log` records a token segment to `~/.agentboard/usage.db`; `usage summary/history/stream/dashboard/learn` aggregate and visualise the data — see `CHEATSHEET.md` for the full reference
