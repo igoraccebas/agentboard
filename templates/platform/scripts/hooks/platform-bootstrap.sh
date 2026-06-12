@@ -33,6 +33,7 @@ if [ -z "$STREAMS" ]; then
   echo "  ⛔ All Done criteria must be checked before closing any stream"
   echo "  ⛔ Only the human/owner declares a stream complete"
   echo "  ⛔ Audit reports must be anchored to stream file (not just chat)"
+  echo "  ⛔ medium+ scope work requires an approved Execution brief before execution"
   echo "======================"
   exit 0
 fi
@@ -71,6 +72,15 @@ while IFS= read -r row; do
       echo "    closure: ⛔ not approved — stream stays open until human explicitly approves"
     fi
 
+    # Check brief gate (plan→approve→execute)
+    if grep -qiE 'brief_approved[*: ]+true' "$STREAM_FILE" 2>/dev/null; then
+      echo "    brief:   ✓ approved — execute within the Execution brief"
+    elif grep -qiE 'brief_approved' "$STREAM_FILE" 2>/dev/null; then
+      echo "    brief:   ⛔ not approved — human must run 'agentboard approve' before execution"
+    else
+      echo "    brief:   — no brief yet (medium+ scope: dispatch ab-planner first)"
+    fi
+
     # Check audit report status
     if grep -q "^## 🔍 Audit" "$STREAM_FILE" 2>/dev/null; then
       if grep -qE '_not yet run_|_TODO_|_todo_' "$STREAM_FILE" 2>/dev/null; then
@@ -97,6 +107,7 @@ echo "  ⛔ closure_approved: true required before closing any stream (enforced 
 echo "  ⛔ All Done criteria must be checked before closing any stream"
 echo "  ⛔ Only the human/owner declares a stream complete"
 echo "  ⛔ Audit reports must be anchored to stream file (not just chat)"
+echo "  ⛔ medium+ scope work requires an approved Execution brief before execution"
 echo "======================"
 
 exit 0

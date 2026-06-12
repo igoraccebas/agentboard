@@ -118,6 +118,10 @@ Whenever the user asks to audit, analyze, or check the state of a stream or its 
 
 This applies even when resuming after context compaction. A compressed context summary is NOT a substitute for reading the protocol spec.
 
+## Plan→Approve→Execute Gate
+
+Medium+ scope work (multi-file, expensive, or touching money/auth/data) never goes straight to code: dispatch the `ab-planner` agent to research and write an `## Execution brief` into the stream file (it sets `brief_approved: false`), the human approves via `agentboard approve <slug>`, and only then execute — strictly within the brief. Trivial single-file work flows untouched. Full protocol: `.platform/workflow.md`.
+
 ## Stream Closure — Human Approval Required
 
 **Only the human/owner declares a stream complete.** You never self-declare completion. You may say "I believe this is done — here is the evidence" and propose closure, but the final decision belongs to the developer. No exceptions.
