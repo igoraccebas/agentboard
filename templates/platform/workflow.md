@@ -53,9 +53,11 @@ Full protocol: `agents/work-tracking.md` § "Starting a new workstream".
 
 ### 3. Research
 
-**Only for medium+ scope.** Default route: delegate to the cheap researcher —
+**Only for medium+ scope.** Default route: delegate to the configured researcher —
 run `agentboard research <slug> "<question>"` (add `--web` for web research).
-It invokes the local Codex CLI read-only, streams its activity live, and
+The command inherits the configured Codex model and does not automatically
+select a cheaper one. It invokes the local Codex CLI
+read-only, streams its activity live, and
 anchors findings in the stream's `## Research notes`, where ab-planner and
 the executor read them. The session invokes this — the human never has to
 remember the command.
@@ -82,7 +84,7 @@ State a 5–10 bullet plan **inline in chat**. Include:
 
 **Do not** write a plan `.md` file. If the user approves, proceed. If they push back, iterate.
 
-**Exit:** user has approved the plan (or you're in autonomous mode and the plan passes your own gate).
+**Exit:** the work is covered by the user's existing authorization, or the user has approved a needed scope or risk change. Silence is not approval.
 
 ### 5. Execute
 
@@ -110,7 +112,7 @@ All three must be true before committing:
 | ✅ Security clear | Quick pass on anything touching auth, payments, or data access |
 | ✅ Human approves | User explicitly says "ship it" / "commit it" — the AI never self-approves |
 
-Present Stage 6 results to the user **before committing**. Wait for the green light.
+Present Stage 6 results to the user **before committing**. Honor explicit commit authorization already given for the same scope; otherwise wait for the owner's approval.
 
 #### Testing philosophy — when and how to write tests
 
@@ -146,31 +148,17 @@ Then verify in parallel:
 - Specialist B: security / code review pass (for anything security-sensitive)
 - Specialist C: real-browser QA (for UI changes)
 
-Then **learn in three layers:**
+Then record the outcome and any durable lessons:
 
-**Layer 1 — Log (always):** append one line to `.platform/memory/log.md`:
-```
-YYYY-MM-DD — <task> — <outcome> — <takeaway>
-```
+- Append one concise outcome to `.platform/memory/log.md`.
+- Record non-obvious root causes, gotchas, and reusable practices with
+  `agentboard fact new`; use the relevant domain and stream. Keep one fact per
+  lesson instead of creating parallel memory files.
+- Record architectural or product decisions in `.platform/memory/decisions.md`.
 
-**Layer 2 — Learnings (if bug was non-obvious):** if the root cause required >10 min to diagnose OR depended on internal behavior that isn't self-evident from the code, record a learning fact:
-
-```bash
-agentboard fact new --type learning --domain <slug> --stream <slug> \
-  --title "<symptom> → <root cause>" --body "<fix + class of problem>"
-```
-```
-## L-NNN — <short title>
-Date: YYYY-MM-DD | Repo: <repo>
-Symptom: <what the developer/user sees>
-Root cause: <the actual reason>
-Fix: <what was changed and where>
-Class: <category — for grep>
-```
-
-**Layer 3 — Memory (if architectural):** if the insight is a stable cross-session invariant (a new pattern, a recurring gotcha, an API contract), update `memory/MEMORY.md` or a topic file under `memory/`.
-
-**Bug investigation rule:** before diagnosing any non-obvious bug, grep `.platform/memory/facts/` for the symptom keyword first (and `memory/legacy/learnings.md` on pre-migration projects). Don't re-diagnose a known class of problem.
+Before investigating a non-obvious bug, search `.platform/memory/facts/` for
+related lessons. On older projects, also check `.platform/memory/learnings.md` before migration
+or `.platform/memory/legacy/learnings.md` after migration, when present. Do not load the full memory pack.
 
 **Exit:** task is done, recorded, and learned from.
 
@@ -212,17 +200,17 @@ Run this checklist **every time a stream reaches done** — before archiving the
 
 Determine which repos are touched. If a stream file exists at `work/<slug>.md`, read it first — it defines scope, done criteria, and key files.
 
-- Stream touches 1 repo → spawn 1 agent
-- Stream touches 2 repos → spawn 2 agents
-- Full platform audit → spawn 1 agent per repo
+- Use one independent review agent per repository when delegation is available.
+- If delegation is unavailable, perform a separate review pass locally and disclose that limit.
 
 ### Step 2 — Announce and dispatch in parallel
 
 ```
-Dispatching N agent(s): <name1> [sonnet] — <purpose>; <name2> [sonnet] — <purpose>; ...
+Dispatching N agent(s): <name1> [configured model] — <purpose>; ...
 ```
 
-**All analysis agents run on Sonnet.** Analysis is read-only — never Opus.
+Analysis is read-only. Use an available review role and respect the configured
+model; choose review depth according to the task and risk.
 
 Spawn one per repo (`run_in_background: true`), each covering:
 
@@ -231,7 +219,7 @@ Spawn one per repo (`run_in_background: true`), each covering:
 | **Implementation state** | What's built, stubbed, missing; TODO/FIXME comments |
 | **Test coverage** | Which files have tests, which have zero, breadth vs. complexity |
 | **Security** | Auth/permissions, hardcoded secrets, XSS, SQL injection, tenant isolation |
-| **Code quality** | Files over 300 lines, business logic in views, N+1 queries, duplication |
+| **Code quality** | File cohesion (review at ~300 lines), business logic in views, N+1 queries, duplication |
 | **Feature-specific** | *(if scoped)* Exact implementation per layer — done, missing, untested |
 
 ### Step 3 — Wait for all agents, then synthesize
@@ -396,22 +384,23 @@ Repeat until the scorecard is all 🟢:
 
 ---
 
-## Model routing (Claude Code, optional)
+## Model guidance (optional)
 
-Route by job, not by habit — the strongest executor is not the cheapest
-planner, and vice versa:
+Use the user's selected model by default. No model-routing announcement is required.
+For a new session or a useful delegated task, choose among the models actually
+available to that provider:
 
-| Job | Suggested model | Why |
-|---|---|---|
-| Research (medium+ scope) | Codex via `agentboard research` | Codebase/web reading is volume work — route it to the cheapest capable reader; findings anchor in `## Research notes` |
-| Plan (medium+ scope) | Opus-class (e.g. Opus 4.8) | Writes the Execution brief (consuming `## Research notes` when present); the brief is the contract — don't cheap out on judgment |
-| Code execution | Strongest coder available (e.g. Fable 5; Opus-class when it's not the session model or unavailable) | Executes the approved brief; pricier per token but finishes in fewer turns |
-| Read-only analysis subagents | Sonnet-class | Analysis is read-only — never burn executor tokens on it |
-| Trivial file ops | Haiku / cheapest | No reasoning needed |
+| Task | Starting point |
+|---|---|
+| Mechanical, well-bounded work | Lightweight model, if switching overhead is worthwhile |
+| Everyday features, fixes, and tests | Balanced coding model |
+| Difficult debugging, architecture, or high-risk review | Strong reasoning model |
+| Hardest sustained work across multiple systems | Most capable available model |
 
-Verify the routing with data: log `--model` at every checkpoint and read
-`agentboard usage impact` monthly — if a task type isn't getting cheaper,
-the routing (or the memory) isn't working.
+Discuss a switch only when it would materially help. Respect explicit model and
+budget choices; this guidance does not switch sessions or authorize a different
+provider. Reassess evidence and context before attributing failure to the model.
+Log the actual model and usage only when known.
 
 ## The plan→approve→execute gate (optional, per stream)
 
@@ -424,7 +413,8 @@ human gate between them:
    `brief_approved: false` and never writes code.
 2. **Approve** — a human reviews the brief and runs
    `agentboard approve <slug>`. In Claude Code the bash-guard turns this into
-   a yes/no click — the LLM cannot self-approve.
+   a native approval prompt for recognized commands. The metadata remains editable;
+   this is a workflow guardrail, not independent authentication of the human.
 3. **Execute** — the execution model implements strictly within the brief.
    `agentboard handoff` shows the gate status (⛔ awaiting / ✓ approved); an
    unapproved brief means: do not write code, ask the user.
@@ -437,7 +427,7 @@ untouched. Re-plan? `agentboard approve <slug> --revoke`, edit, re-approve.
 ## Integration with agent CLIs
 
 - **Claude Code:** `CLAUDE.md` at project root auto-loads. Skills in `.claude/skills/` extend this workflow.
-- **Codex CLI:** `AGENTS.md` at project root auto-loads. Same content as CLAUDE.md, regenerated by `scripts/sync-context.sh`.
-- **Gemini CLI:** `GEMINI.md` at project root auto-loads. Same content as CLAUDE.md, regenerated by `scripts/sync-context.sh`.
+- **Codex CLI:** `AGENTS.md` at project root auto-loads. Its managed block is synchronized by `scripts/sync-context.sh`; provider-specific text is preserved.
+- **Gemini CLI:** `GEMINI.md` follows the same managed-block contract.
 
 All three read the same `.platform/` reference pack.

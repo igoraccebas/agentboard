@@ -14,3 +14,4 @@ dist/
 .codex/
 .claude/settings.json
 .claude/settings.json.agentboard-backup-*
+.claude/settings.local.json

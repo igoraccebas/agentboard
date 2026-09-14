@@ -1,4 +1,8 @@
 cmd_close() {
+  with_state_lock _cmd_close "$@"
+}
+
+_cmd_close() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
 
   local slug="${1:-}"
@@ -33,7 +37,6 @@ cmd_close() {
   fi
 
   local archive_dir="./.platform/work/archive"
-  mkdir -p "$archive_dir"
   local archive_path="$archive_dir/${slug}.md"
   if [[ -e "$archive_path" ]]; then
     local n=2
@@ -43,23 +46,36 @@ cmd_close() {
 
   if (( dry_run )); then
     printf '%sWould archive%s %s → %s\n' "$C_BOLD" "$C_RESET" "$stream_file" "$archive_path"
-    printf '%sWould update frontmatter:%s status=done, closure_approved=true\n' "$C_BOLD" "$C_RESET"
+    printf '%sWould update frontmatter:%s status=done (requires recorded closure approval and completed criteria)\n' "$C_BOLD" "$C_RESET"
     printf '%sWould append closure row to .platform/memory/log.md%s\n' "$C_BOLD" "$C_RESET"
     return 0
+  fi
+
+  [[ "$(frontmatter_value "$stream_file" closure_approved)" == true ]] ||
+    die "closure_approved must already be true after explicit owner sign-off."
+  if awk '/^## Done criteria[[:space:]]*$/ { in_section=1; next }
+    in_section && /^## / { exit }
+    in_section && /^[[:space:]]*[-*][[:space:]]+\[[[:space:]]\]/ { found=1 }
+    END { exit !found }' "$stream_file"; then
+    die "Unchecked done criteria remain. Finish verification before closing."
   fi
 
   local today_str agent
   today_str="$(today)"
   agent="${AGENTBOARD_AGENT:-${USER:-agent}}"
 
-  replace_frontmatter_line "$stream_file" "status" "done"
-  replace_frontmatter_line "$stream_file" "closure_approved" "true"
-  replace_frontmatter_line "$stream_file" "updated_at" "$today_str"
-
-  mv "$stream_file" "$archive_path"
-
-  _close_append_log "$slug" "$archive_path" "$today_str" "$agent"
-  _close_remove_from_active_registry "$slug"
+  _close_commit() {
+    mkdir -p "$archive_dir" || return 1
+    cp -p "$stream_file" "$archive_path" || return 1
+    replace_frontmatter_line "$archive_path" "status" "done" || return 1
+    replace_frontmatter_line "$archive_path" "updated_at" "$today_str" || return 1
+    _close_append_log "$slug" "$archive_path" "$today_str" "$agent" || return 1
+    _close_remove_from_active_registry "$slug" || return 1
+    _close_refresh_brief "$slug" || return 1
+    rm "$stream_file" || return 1
+  }
+  state_transaction _close_commit "$stream_file" "$archive_path" \
+    ./.platform/work/ACTIVE.md ./.platform/work/BRIEF.md ./.platform/memory/log.md || return 1
 
   ok "Stream ${C_BOLD}${slug}${C_RESET} closed and archived → ${C_CYAN}${archive_path}${C_RESET}"
   say "  ${C_DIM}If the harvest step (facts + decisions) wasn't done before --confirm,${C_RESET}"
@@ -82,9 +98,11 @@ Step 1 — harvest (no flag):
 
 Step 2 — finalize (--confirm):
   Moves the stream file to .platform/work/archive/<slug>.md
-  Sets status=done, closure_approved=true
+  Requires pre-existing closure_approved: true and no unchecked done criteria
+  Sets status=done (does not grant approval)
   Appends a closure row to .platform/memory/log.md
   Removes the stream from work/ACTIVE.md
+  Clears BRIEF.md if it references this stream
 
 Flags:
   --confirm   Actually archive + log. Run AFTER the harvest step.
@@ -153,13 +171,13 @@ _close_append_log() {
   local log="./.platform/memory/log.md"
   [[ -f "$log" ]] || return 0
   local line="${today_str} — closed stream ${slug} → ${archive_path} (by ${agent})"
-  local tmp; tmp="$(mktemp)"
+  local tmp; tmp="$(mktemp "$(dirname "$log")/.log.XXXXXX")" || return 1
   awk -v new="$line" '
     BEGIN { inserted = 0 }
     /^---$/ && !inserted { print; print ""; print new; inserted = 1; next }
     { print }
     END { if (!inserted) { print ""; print new } }
-  ' "$log" > "$tmp"
+  ' "$log" > "$tmp" || { rm -f "$tmp"; return 1; }
   mv "$tmp" "$log"
 }
 
@@ -167,7 +185,19 @@ _close_remove_from_active_registry() {
   local slug="$1"
   local registry="./.platform/work/ACTIVE.md"
   [[ -f "$registry" ]] || return 0
-  local tmp; tmp="$(mktemp)"
-  grep -v "^| *${slug} *|" "$registry" > "$tmp" || true
+  local tmp; tmp="$(mktemp "$(dirname "$registry")/.active.XXXXXX")" || return 1
+  awk -F '|' -v slug="$slug" '{ key=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", key); if (key != slug) print }' \
+    "$registry" > "$tmp" || { rm -f "$tmp"; return 1; }
   mv "$tmp" "$registry"
+}
+
+_close_refresh_brief() {
+  local slug="$1" brief="./.platform/work/BRIEF.md" tmp
+  [[ -f "$brief" ]] || return 0
+  grep -qF "\`work/${slug}.md\`" "$brief" || return 0
+  tmp="$(mktemp "$(dirname "$brief")/.brief.XXXXXX")" || return 1
+  printf '%s\n' '# Project brief' '' 'No primary stream selected.' \
+    'Run `agentboard brief` for active work and `agentboard handoff <slug>` to resume it.' \
+    'See `work/ACTIVE.md` for the stream registry.' > "$tmp" || return 1
+  mv "$tmp" "$brief"
 }

@@ -2,52 +2,7 @@
 
 _usage_db="$HOME/.agentboard/usage.db"
 
-_init_usage_db() {
-  if [[ ! -f "$_usage_db" ]]; then
-    mkdir -p "$HOME/.agentboard"
-    sqlite3 "$_usage_db" "CREATE TABLE IF NOT EXISTS usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        agent_provider TEXT NOT NULL,
-        model TEXT,
-        stream_slug TEXT,
-        repo TEXT,
-        task_type TEXT,
-        input_tokens INTEGER,
-        output_tokens INTEGER,
-        total_tokens INTEGER,
-        estimated_cost REAL,
-        note TEXT,
-        session_id TEXT
-    );"
-  else
-    sqlite3 "$_usage_db" \
-      "ALTER TABLE usage ADD COLUMN note TEXT;" 2>/dev/null || true
-  fi
-}
-
-# Sum a column for rows matching a session key.
-# Session key format: "<stream>|<provider>|<YYYY-MM-DD>". Rows are matched by
-# stream_slug + agent_provider + calendar day (DATE(timestamp) in local zone).
-_usage_session_sum() {
-  local db="$1" key="$2" column="$3"
-  # Parse key (fields separated by |)
-  local stream provider day
-  stream="$(printf '%s' "$key" | awk -F'|' '{print $1}')"
-  provider="$(printf '%s' "$key" | awk -F'|' '{print $2}')"
-  day="$(printf '%s' "$key" | awk -F'|' '{print $3}')"
-  # Empty day means caller gave non-standard session key; fall back to matching
-  # the key exactly on stream_slug + provider with any timestamp.
-  if [[ -z "$day" ]]; then
-    sqlite3 "$db" "SELECT COALESCE(SUM($column), 0) FROM usage
-      WHERE stream_slug = '$stream' AND agent_provider = '$provider';"
-    return 0
-  fi
-  sqlite3 "$db" "SELECT COALESCE(SUM($column), 0) FROM usage
-    WHERE stream_slug = '$stream'
-      AND agent_provider = '$provider'
-      AND DATE(timestamp, 'localtime') = '$day';"
-}
+source "$AGENTBOARD_ROOT/lib/agentboard/commands/usage_store.sh"
 
 # Analyse patterns and emit findings + recommendations
 # Returns lines of the form: FINDING|RECOMMENDATION|SAVING
@@ -128,90 +83,27 @@ _analyse_patterns() {
 cmd_usage() {
   command -v sqlite3 >/dev/null 2>&1 || die "sqlite3 is required for usage monitoring. Install it first."
 
-  _init_usage_db
+  _init_usage_db || { warn "Could not initialize usage database"; return 1; }
   local db="$_usage_db"
   local sub="${1:-summary}"
   shift || true
 
   case "$sub" in
     log)
-      local provider="" model="" stream="" input=0 output=0 repo="" type="chore" note=""
-      local cum_in="" cum_out="" session_key=""
-      repo="$(basename "$(pwd)")"
-
-      while [[ $# -gt 0 ]]; do
-        case "$1" in
-          --provider) provider="$2"; shift 2 ;;
-          --model)    model="$2";    shift 2 ;;
-          --stream)   stream="$2";   shift 2 ;;
-          --repo)     repo="$2";     shift 2 ;;
-          --type)     type="$2";     shift 2 ;;
-          --input)    input="$2";    shift 2 ;;
-          --output)   output="$2";   shift 2 ;;
-          --cumulative-in)  cum_in="$2";  shift 2 ;;
-          --cumulative-out) cum_out="$2"; shift 2 ;;
-          --session-key)    session_key="$2"; shift 2 ;;
-          --note)     note="$2";     shift 2 ;;
-          *) shift ;;
-        esac
-      done
-      [[ -n "$provider" ]] || die "Usage: agentboard usage log --provider <name> (--input <N> --output <N> | --cumulative-in <N> --cumulative-out <N>) [--model <M>] [--stream <S>] [--session-key <K>] [--repo <R>] [--type <T>] [--note <text>]"
-
-      # Cumulative mode: Claude/Codex/Gemini report running session totals, not
-      # per-segment deltas. Compute delta = cumulative - sum-logged-so-far for
-      # this session, so each log row stores the actual segment usage.
-      if [[ -n "$cum_in" || -n "$cum_out" ]]; then
-        [[ -n "$cum_in" && -n "$cum_out" ]] \
-          || die "--cumulative-in and --cumulative-out must be used together"
-        [[ "$cum_in" =~ ^[0-9]+$ && "$cum_out" =~ ^[0-9]+$ ]] \
-          || die "--cumulative-in/--cumulative-out must be non-negative integers"
-
-        # Default session scope: same stream + same provider + same calendar day.
-        # Users can override with --session-key for custom grouping.
-        local default_key="${stream}|${provider}|$(date +%Y-%m-%d)"
-        local key="${session_key:-$default_key}"
-
-        local prev_in prev_out
-        prev_in="$(_usage_session_sum "$db" "$key" input_tokens)"
-        prev_out="$(_usage_session_sum "$db" "$key" output_tokens)"
-        [[ -z "$prev_in" ]] && prev_in=0
-        [[ -z "$prev_out" ]] && prev_out=0
-
-        local delta_in=$(( cum_in - prev_in ))
-        local delta_out=$(( cum_out - prev_out ))
-
-        # Negative delta = session reset (new CLI session with fresh counter).
-        # Log the cumulative as-is — it represents a full fresh session.
-        local reset_note=""
-        if (( delta_in < 0 || delta_out < 0 )); then
-          delta_in="$cum_in"
-          delta_out="$cum_out"
-          reset_note=" (session reset detected — logging cumulative as fresh segment)"
-        fi
-
-        input="$delta_in"
-        output="$delta_out"
-        printf '  %scumulative: %s in / %s out · session-so-far: %s in / %s out · delta: %s in / %s out%s%s\n' \
-          "$C_DIM" "$cum_in" "$cum_out" "$prev_in" "$prev_out" \
-          "$delta_in" "$delta_out" "$reset_note" "$C_RESET"
-      fi
-
-      local total=$((input + output))
-      sqlite3 "$db" "INSERT INTO usage (agent_provider, model, stream_slug, repo, task_type, input_tokens, output_tokens, total_tokens, note)
-        VALUES ('$provider', '$model', '$stream', '$repo', '$type', $input, $output, $total, '$note');"
-      ok "Logged $total tokens  (provider=$provider repo=$repo stream=${stream:-none} type=$type)"
-      [[ -n "$note" ]] && printf '  note: %s\n' "$note" || true
+      _usage_log "$db" "$@" || return 1
       ;;
 
     stream)
       local target_stream="${1:-}"
       [[ -n "$target_stream" ]] || die "Usage: agentboard usage stream <stream-slug>"
       printf '\n%s%sStream: %s%s\n\n' "$C_BOLD" "$C_CYAN" "$target_stream" "$C_RESET"
+      local quoted_stream
+      quoted_stream="$(_usage_text "$target_stream")"
       sqlite3 -header -column "$db" "
         SELECT timestamp, agent_provider AS Provider, model AS Model,
                input_tokens AS Input, output_tokens AS Output,
                total_tokens AS Total, note AS Note
-        FROM usage WHERE stream_slug = '$target_stream' ORDER BY timestamp ASC;
+        FROM usage WHERE stream_slug = $quoted_stream ORDER BY timestamp ASC;
       "
       say
       sqlite3 -header -column "$db" "
@@ -219,14 +111,14 @@ cmd_usage() {
                COUNT(*) AS Segments,
                SUM(input_tokens) AS Total_Input, SUM(output_tokens) AS Total_Output,
                SUM(total_tokens) AS Grand_Total
-        FROM usage WHERE stream_slug = '$target_stream'
+        FROM usage WHERE stream_slug = $quoted_stream
         GROUP BY agent_provider, model ORDER BY Grand_Total DESC;
       "
       say
       sqlite3 "$db" "
         SELECT '  STREAM TOTAL: ' || SUM(total_tokens) || ' tokens across '
                || COUNT(*) || ' context segment(s)'
-        FROM usage WHERE stream_slug = '$target_stream';
+        FROM usage WHERE stream_slug = $quoted_stream;
       "
       ;;
 

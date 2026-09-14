@@ -151,9 +151,11 @@ Read the full diff. Do not skim. For large diffs, focus on:
 
 ### Step 5 — Decide
 
-- **APPROVE:** All four axes pass, no critical or high findings. Merge.
-- **REQUEST CHANGES:** High findings exist but nothing critical. Merge after fixes.
+- **APPROVE:** All four axes pass, no critical or high findings. Report that the change passes review.
+- **REQUEST CHANGES:** High findings exist but nothing critical. Fix the findings, rerun affected checks, and review the updated diff.
 - **BLOCK:** Critical findings or spec mismatch. Back to Stage 5.
+
+The verdict is a review result, not authorization to commit or merge. Present findings and verification results before either action, and require explicit user authorization for that action under `.platform/workflow.md`. Honor authorization already given for the same scope without asking again; otherwise leave the changes ready for review and request approval.
 
 ## Severity rubric
 
@@ -182,12 +184,13 @@ Read the full diff. Do not skim. For large diffs, focus on:
 3. **Critical findings block merge.** No exceptions without explicit user override.
 4. **Security findings escalate to `ab-security`** for deep analysis if severity is uncertain.
 5. **Verdict is one of three.** APPROVE / REQUEST CHANGES / BLOCK.
+6. **An APPROVE verdict does not authorize a commit or merge.** Required checks and explicit user authorization still apply.
 
 ## Integration
 
 - **Upstream:** called by `ab-workflow` Stage 6 before merge, or directly via `/ab-review`
 - **Escalation:** hands off to `ab-security` for deep security review, `ab-qa` for UI verification
-- **Downstream:** approves or sends back to Stage 5
+- **Downstream:** reports review readiness or sends back to Stage 5; the main agent handles any separately authorized commit or merge
 
 ## Anti-patterns
 

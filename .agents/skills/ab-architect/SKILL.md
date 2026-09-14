@@ -51,7 +51,7 @@ If you can't write it in one sentence, split it into two designs.
 
 Parallel probes:
 - `Read` `.platform/architecture.md` (if present) for the current topology
-- `Read` `.platform/decisions.md` for prior decisions in the area
+- `Read` `.platform/memory/decisions.md` for prior decisions in the area
 - `Grep` for similar existing patterns in the codebase
 - Read the 3–5 most relevant source files
 
@@ -110,11 +110,11 @@ Use exactly this structure:
 
 ### Step 4 — Get approval
 
-Post the design in chat. Ask the user to confirm or revise. **Do not** write the design to a `.md` file. The design is a chat artifact that becomes code and tests — and, if the decision is load-bearing, a row in `.platform/decisions.md`.
+Post the design in chat. Ask the user to confirm or revise. **Do not** write the design to a `.md` file. The design is a chat artifact that becomes code and tests — and, if the decision is load-bearing, a row in `.platform/memory/decisions.md`.
 
 ### Step 5 — Record the decision (if load-bearing)
 
-If the design locks in a choice that will bite future sessions if forgotten, append to `.platform/decisions.md`:
+If the design locks in a choice that will bite future sessions if forgotten, append to `.platform/memory/decisions.md`:
 ```
 | N | YYYY-MM-DD | locked | <topic> | <decision> | <why> | <rejected: list> |
 ```
@@ -144,8 +144,8 @@ Length target: 150–400 lines of chat. Longer means over-designed, shorter mean
 ## Integration
 
 - **Upstream:** called by `ab-workflow` Stage 4 for medium+ tasks, or directly when the user asks for a design
-- **Inputs:** `.platform/architecture.md`, `.platform/decisions.md`, existing source files
-- **Outputs:** chat artifact (the design), optional row in `.platform/decisions.md`
+- **Inputs:** `.platform/architecture.md`, `.platform/memory/decisions.md`, existing source files
+- **Outputs:** chat artifact (the design), optional row in `.platform/memory/decisions.md`
 - **Downstream:** feeds execution and `ab-test-writer` (which reads the "Tests needed" section)
 
 ## Anti-patterns

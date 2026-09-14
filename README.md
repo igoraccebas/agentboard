@@ -227,11 +227,11 @@ and each fact carries domains, a source stream, and an optional expiry.
 
 **2. Capture that doesn't rely on obedience.** Claude Code gets a SessionEnd
 hook that auto-runs `agentboard checkpoint --auto` when a session ends — work
-state can't silently go stale. Codex and Gemini have no hook surface, so
+state is captured when the hook runs successfully. For providers without an installed session hook,
 `agentboard install-hooks --git` installs a pre-commit fallback that blocks
 code commits when no open stream was checkpointed today
 (`AGENTBOARD_SKIP_CHECKPOINT=1` bypasses). Enforcement coverage is honest:
-runtime hooks on Claude, commit-time gate everywhere else.
+session hooks where installed, with a commit-time fallback across providers.
 
 **3. Harvest — private notes become team truth.** Claude Code writes its own
 machine-local notes as you work. `agentboard harvest` lists the notes not yet
@@ -259,14 +259,55 @@ cheaper. Agentboard ships an opt-in gate that splits the work:
    `## Execution brief` into the stream file: objective, Do / Do NOT lines,
    files in scope, acceptance criteria. It never writes code.
 2. **Approve** — a human runs `agentboard approve <slug>`. In Claude Code
-   the bash-guard intercepts the command, so approval is a yes/no click in
-   the session — the LLM cannot approve its own plan.
+   the bash-guard requests native approval for recognized commands. Local
+   metadata remains editable: this is a workflow guardrail, not proof of
+   human identity. Native sandbox and permission settings still apply.
 3. **Execute** — the execution model (your strongest available coder)
    implements within the brief. `handoff` and `brief` show the gate status
    to every resuming agent; an unapproved brief reads as "do not write code".
 
 The gate exists only on streams that have a brief — trivial work is never
 taxed. `usage impact` tells you whether the split actually saves tokens.
+
+## Reliable state and provider configuration
+
+Codex roles inherit the user's selected model. Role config paths are relative
+to `.codex/config.toml`; research roles are read-only and coding uses
+`workspace-write`. Existing customized configs are not overwritten automatically.
+For older generated configs, change `.codex/agents/name.toml` to `agents/name.toml`,
+replace `sandbox_mode = "full"` with `"workspace-write"`, and remove obsolete
+model pins. `agentboard install-hooks --force` refreshes Claude settings with
+a backup; review the diff and retain any custom hooks.
+
+`close --confirm` requires recorded `closure_approved: true` after owner sign-off
+and no unchecked items in `## Done criteria`. It archives the stream, updates
+the registry and log, and clears BRIEF if that was the primary stream.
+Lifecycle writers (`new-stream`, `checkpoint`, `research`, `approve`, `progress`,
+and `close`) serialize their state updates. Multi-file closure and
+stream creation retain recovery snapshots until the operation succeeds.
+Direct editor writes and memory/index maintenance do not participate in this lock.
+If a process is
+force-killed, inspect `.platform/.transaction.*` and its `targets` manifest
+before removing the empty `.platform/.state.lock` directory and retrying.
+
+For cumulative usage, pass `--session-id <stable-id>` to `usage log` or
+`checkpoint`, or set `AGENTBOARD_SESSION_ID` once per provider session.
+Accounting is isolated by canonical project path, provider, stream and
+session, and duplicate/out-of-order observations cannot double-count that session.
+Incremental reports advance the same baseline, so later cumulative reports do
+not recount them. Incremental reports are additive, not retry-idempotent: use
+cumulative counters when retrying a report that may already have succeeded.
+`--session-key` remains an alias. Without an ID, a daily compatibility mode
+detects counter drops and saves the new baseline; it cannot distinguish a
+new session from an old report. Start a new explicit session after upgrading
+from legacy accounting. Historical records are preserved, not retroactively corrected.
+
+Entry-file sync updates only the block delimited by
+`<!-- agentboard:root-entry:begin v=1 -->` and
+`<!-- agentboard:root-entry:end v=1 -->`. Put shared rules inside that block
+in CLAUDE.md and provider-specific instructions outside it. Unmarked targets
+retain their content below a new block. Unmarked or malformed sources require
+manual boundary selection; sync never guesses which instructions may be replaced.
 
 ---
 

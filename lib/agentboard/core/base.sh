@@ -357,14 +357,14 @@ replace_template_literals() {
   while [[ $# -gt 0 ]]; do
     old="$1"; new="$2"; shift 2
     new_esc="${new//|/\\|}"
-    sed -i.bak "s|$old|$new_esc|g" "$file"
+    sed -i.bak "s|$old|$new_esc|g" "$file" || return 1
   done
   rm -f "${file}.bak"
 }
 
 replace_frontmatter_line() {
   local file="$1" key="$2" value="$3"
-  sed -i.bak -E "s|^${key}: .*|${key}: ${value}|" "$file"
+  sed -i.bak -E "s|^${key}: .*|${key}: ${value}|" "$file" || return 1
   rm -f "${file}.bak"
 }
 
@@ -374,9 +374,9 @@ set_frontmatter_value() {
   local file="$1" key="$2" value="$3"
   if grep -qE "^${key}:" "$file"; then
     replace_frontmatter_line "$file" "$key" "$value"
-    return 0
+    return $?
   fi
-  local tmp; tmp="$(mktemp)"
+  local tmp; tmp="$(mktemp)" || return 1
   awk -v kv="${key}: ${value}" '
     BEGIN { seen = 0; in_fm = 0 }
     /^---[[:space:]]*$/ {
@@ -384,7 +384,7 @@ set_frontmatter_value() {
       if (in_fm) { print kv; in_fm = 0; print; next }
     }
     { print }
-  ' "$file" > "$tmp"
+  ' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
   mv "$tmp" "$file"
 }
 
@@ -413,7 +413,8 @@ join_lines_comma() {
 brief_is_placeholder() {
   local brief="$1"
   [[ ! -f "$brief" ]] && return 0
-  grep -q "_not yet set — fill this in when you start your first workstream_" "$brief"
+  grep -q "_not yet set — fill this in when you start your first workstream_" "$brief" ||
+    grep -qx 'No primary stream selected\.' "$brief"
 }
 
 stream_rows_from_active() {
@@ -528,4 +529,3 @@ path_contains_dir() {
   done
   return 1
 }
-

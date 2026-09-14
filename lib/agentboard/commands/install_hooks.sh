@@ -25,7 +25,7 @@ cmd_install_hooks() {
 
   # 1) Install the hook scripts (idempotent — templates are source of truth)
   local script_src script_dst script_name
-  for script_name in bash-guard.sh session-close.sh pre-commit-checkpoint.sh; do
+  for script_name in bash-guard.sh platform-closure-gate.js platform-bootstrap.sh session-close.sh pre-commit-checkpoint.sh; do
     script_src="$TEMPLATES_PLATFORM/scripts/hooks/$script_name"
     script_dst="./.platform/scripts/hooks/$script_name"
     [[ -f "$script_src" ]] || continue
@@ -161,18 +161,29 @@ enforces stream-closure approval, and auto-captures work state.
 What gets installed:
   .platform/scripts/hooks/bash-guard.sh
       PreToolUse hook on the Bash tool. Intercepts `git commit`, `git push`,
-      `git reset --hard`, `git checkout --`, `git branch -D`, `rm -rf` and
-      returns `permissionDecision: ask` — you click yes/no in Claude Code.
-      LLMs cannot bypass.
+      `git reset --hard`, `git checkout --`, `git branch -D`, `rm -rf`,
+      `agentboard approve` and `agentboard close --confirm`, and returns
+      `permissionDecision: ask` — Claude Code shows its native approval prompt.
+      Uses node when available; without node a coarse bash match still asks.
+
+  .platform/scripts/hooks/platform-closure-gate.js
+      PreToolUse hook on Edit/Write. Blocks an ACTIVE.md edit that closes or
+      removes a stream row unless that stream file records
+      closure_approved: true and has no unchecked Done criteria.
+
+  .platform/scripts/hooks/platform-bootstrap.sh
+      SessionStart hook. Prints the platform state (streams, gates, rules).
 
   .platform/scripts/hooks/session-close.sh
       SessionEnd hook. Auto-runs `agentboard checkpoint --auto` when a
       Claude Code session ends, so work state never goes stale silently.
       Fail-open: never blocks session close.
 
+  .platform/scripts/hooks/pre-commit-checkpoint.sh
+      Installed into .git/hooks with --git (see below).
+
   .claude/settings.json
-      Wires the guards into Claude Code. Also installs the existing
-      closure-gate and session-bootstrap hooks shipped with agentboard init.
+      Wires the hooks into Claude Code.
 
 Flags:
   --git       Also install the cross-provider fallback: a git pre-commit
@@ -189,8 +200,10 @@ Flags:
 Notes:
   - Fresh `agentboard init` already writes the full settings.json, so this
     command is mostly for existing projects or re-install.
-  - The guards are deliberately fail-open: if a hook errors, commands
-    still run and sessions still close.
+  - Hook errors (missing runtime, unreadable hook input) are reported and
+    never block: commands still run, edits proceed, sessions still close.
+    The closure gate blocks only when it cannot establish owner approval
+    for a stream row that is being closed or removed.
   - Enforcement coverage is honest, not uniform: Claude Code gets runtime
     hooks; Codex/Gemini get the --git pre-commit fallback at commit time.
 EOF

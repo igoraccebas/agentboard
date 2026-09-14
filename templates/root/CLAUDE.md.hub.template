@@ -1,81 +1,39 @@
 # {{PROJECT_NAME}} — PLATFORM BRAINS HUB (NOT YET ACTIVATED)
 
-**Status:** This folder was scaffolded by `agentboard init` on {{TODAY}} in **hub mode** and is **not yet activated**. The `.platform/` context pack is present but the sibling repo list and cross-repo conventions are empty.
-
 > {{DESCRIPTION}}
 
----
+Scaffolded on {{TODAY}}. This hub coordinates sibling repositories listed in `.platform/repos.md`.
+Say "activate this project" to populate context using `.platform/ACTIVATE-HUB.md`.
+Use `agentboard add-repo <path>` to connect each sibling repository.
+Preserve existing user content during activation.
 
-## What is a "platform brains hub"?
+<!-- agentboard:root-entry:begin v=1 -->
+## Shared project workflow
 
-This folder is **not a code repo**. It exists to hold the `.platform/` context pack that coordinates multiple sibling repos (for example, a backend + a frontend + a widget living in neighbouring folders). The hub is where cross-repo architecture, decisions, conventions, and workflow live so every AI session across every repo reads from the same source of truth.
+Start with `agentboard brief`, then read `.platform/work/BRIEF.md` and `.platform/work/ACTIVE.md`.
+For an existing task run `agentboard handoff <slug>` and follow its load order and Resume state.
+Use the user's stated task to select work; ask which stream only when the intent is ambiguous.
 
-You'll see folders next to this one like `../my-backend`, `../my-frontend`, `../my-widget` — those are the repos this hub coordinates. The hub itself holds only `.platform/`, this `CLAUDE.md`, and optionally a README.
+Before non-trivial new work, create or update the focused domain inventory, register a stream
+with `agentboard new-stream`, and point BRIEF.md at it. Trivial fixes need no ceremony.
+Load only relevant domain/reference files; do not load archives or the full memory pack by default.
 
----
+For complex work, use `.platform/workflow.md` and the relevant `ab-*` skill.
+Use available provider roles for bounded parallel work; never require an unavailable model.
+An unapproved Execution brief prohibits implementation; ask the owner to approve it.
+Preserve unrelated changes and user content. Run relevant tests; show evidence before claiming success.
+Never commit, publish, perform destructive actions, or close a stream without the owner's authorization.
 
-## You are an AI agent reading this file
+Before ending work or changing providers, save a checkpoint:
+`agentboard checkpoint <slug> --what "what changed" --next "next action"`.
+Log only known token counters and the actual provider/model. For cumulative counters pass
+a stable `--session-id` (or `AGENTBOARD_SESSION_ID`) unique to the provider session.
 
-Claude Code, Codex CLI, Gemini CLI, or any other AI tool — this file is auto-loaded when you open this hub folder. You were pointed here because it lives at the hub root.
+For closure, run `agentboard close <slug>` for the harvest checklist.
+Complete the Done criteria, preserve durable lessons, and obtain explicit owner sign-off.
+Record `closure_approved: true` only after sign-off, then run `agentboard close <slug> --confirm`.
+The CLI validates recorded approval and completed criteria. Hooks are additional guardrails;
+local editable metadata does not independently authenticate the owner.
 
-**When the user says "activate this project"** (or similar — "fill in the platform pack", "onboard this hub", "run agentboard activation"), read `.platform/ACTIVATE-HUB.md` and follow its 6-step protocol. That file is the **hub-mode** activation protocol — it scans sibling repo paths listed in `.platform/repos.md`, not this (empty) hub folder.
-
-**Until activation**, answer the user's question normally. If relevant, mention that the hub has not been activated yet and they can say "activate this project" to run the setup.
-
-**Important:** `.platform/ACTIVATE-HUB.md` contains rules for how to handle existing `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` files at the root (here and in every sibling repo) — **never delete user content**, always prepend the agentboard section to the top and preserve the original below.
-
----
-
-## Next steps for the human
-
-1. Open `.platform/repos.md` and list the sibling repos you want this hub to coordinate. Replace the placeholder rows with real paths, names, and stacks.
-2. For each sibling repo, run `agentboard add-repo <path>` from this hub folder — that scaffolds a thin `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` in the sibling that points back at this hub's `.platform/` pack.
-3. Open this hub folder in your AI CLI and say `activate this project`. The LLM will read `.platform/ACTIVATE-HUB.md`, scan each sibling repo, interview you for a few minutes, and fill in the hub pack.
-
----
-
-## Active Work (`.platform/work/`)
-
-**Read `.platform/work/ACTIVE.md` first every session** — before STATUS.md, before anything else.
-It tells you what's currently in progress so you can orient in seconds, not minutes.
-See `.platform/agents/work-tracking.md` for the full protocol.
-
-## Reference pack
-
-- `.platform/ACTIVATE-HUB.md` — the hub-mode activation protocol (read this when the user says "activate")
-- `.platform/repos.md` — the sibling repo list (you fill this in first)
-- `.platform/workflow.md` — the 6-stage inline workflow for non-trivial tasks
-- `.platform/ONBOARDING.md` — the 7-step onboarding path for future sessions
-- `.platform/scripts/sync-context.sh` — keeps root entry files in sync across repos (see `ACTIVATE-HUB.md` Step 5)
-
-## Subagent Model Assignment (Claude Code only)
-
-Before every `Task` tool dispatch, print a manifest block in chat:
-
-> **⚡ Dispatching N agent(s)**
->
-> | Agent | Model | Task |
-> |---|---|---|
-> | **Name** | 🔵 `sonnet` | purpose |
-
-Model emoji: 🔵 `sonnet` · 🟣 `opus` · 🟡 `haiku`. Pass `model` explicitly on every `Task` call — never omit it (omitting inherits Opus and wastes tokens).
-
-| Work type | Model |
-|---|---|
-| Research, audit, exploration, doc writing, code review, test writing, security audit | 🔵 **`sonnet`** |
-| Code implementation, hard architectural decisions, executors handling deviations | 🟣 **`opus`** |
-| Mechanical / trivial narrow operations | 🟡 **`haiku`** |
-
-Name agents with a persona — e.g., "Max the Mapper", "Kai the Coder". Full rule: `.platform/agents/subagent-dispatch.md`.
-
-## Skills available to you
-
-Installed additively into `.claude/skills/` by `agentboard init`. Prefixed `ab-` so they never collide with gstack / pre-existing skills.
-
-`ab-triage`, `ab-workflow`, `ab-research`, `ab-pm`, `ab-architect`, `ab-test-writer`, `ab-security`, `ab-qa`, `ab-review`, `ab-debug`
-
-Read each skill's `SKILL.md` on first use to understand its protocol.
-
----
-
-_Generated by agentboard (hub mode) on {{TODAY}}. After activation, this file will be replaced with the steady-state hub version (or, if you had an existing `CLAUDE.md` before init, the steady-state content will be prepended to the top of your file)._
+Keep provider-specific instructions outside this managed block; sync preserves them.
+<!-- agentboard:root-entry:end v=1 -->

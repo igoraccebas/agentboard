@@ -8,20 +8,21 @@ max_depth   = 1   # root agent may spawn children; children cannot spawn further
 
 # ── Generic roles ─────────────────────────────────────────────────────────────
 # The LLM replaces these with project-specific roles during activation.
-# Add one [[agents.<name>]] block + matching .codex/agents/<name>.toml per role.
+# Add one [agents.<name>] block + matching agents/<name>.toml per role.
+# Role paths resolve relative to this config file. Models inherit user settings.
 
 [agents.researcher]
 description = "Read-only codebase explorer — research, mapping, audit, doc writing"
-config_file = ".codex/agents/researcher.toml"
+config_file = "agents/researcher.toml"
 
 [agents.coder]
 description = "Implementation agent — writes and edits production code"
-config_file = ".codex/agents/coder.toml"
+config_file = "agents/coder.toml"
 
 [agents.auditor]
 description = "Code review, security audit, test writing, verification"
-config_file = ".codex/agents/auditor.toml"
+config_file = "agents/auditor.toml"
 
 [agents.mapper]
 description = "Fast file discovery, grep, glob — trivial mechanical ops"
-config_file = ".codex/agents/mapper.toml"
+config_file = "agents/mapper.toml"

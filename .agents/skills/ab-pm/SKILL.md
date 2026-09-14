@@ -57,13 +57,13 @@ Output one of three verdicts:
 
 ### Step 3 — Record the decision
 
-If the verdict is BUILD or RESHAPE and the project has a `.platform/decisions.md`, append a row:
+If the verdict is BUILD or RESHAPE and the project has a `.platform/memory/decisions.md`, append a row:
 
 ```
 | N | YYYY-MM-DD | locked | <feature> | <v0 shape> | <why> | <what was considered and rejected> |
 ```
 
-If KILL, append to `.platform/log.md`:
+If KILL, append to `.platform/memory/log.md`:
 ```
 YYYY-MM-DD — PM kill: <feature> — <one-sentence why> — <what to do instead, if anything>
 ```

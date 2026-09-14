@@ -1,3 +1,18 @@
+<!-- agentboard:root-entry:begin v=1 -->
+## Shared workflow
+
+This repository is activated and uses `.platform/` for its own work state.
+Start with `agentboard brief`, then `.platform/work/BRIEF.md` and `.platform/work/ACTIVE.md`.
+Use the user's stated task to choose the stream; ask only when the task is ambiguous.
+Run `agentboard handoff <slug>` before resuming an existing stream.
+Follow `.platform/workflow.md` for registration, verification, analysis, and closure.
+For a stream/feature audit, read its analysis protocol before dispatching reviewers or synthesizing results, and anchor the report in the stream.
+Preserve unrelated edits and provider-specific instructions. Existing task authorization remains valid. Commit and merge require passing checks and explicit owner authorization; honor prior authorization for the same scope. Closure follows the evidence and owner sign-off sequence in `.platform/workflow.md`.
+Checkpoint before ending work. Record only known usage and actual model identity.
+Store lessons through `agentboard fact new`; decisions and session outcomes belong in `.platform/memory/decisions.md` and `.platform/memory/log.md`.
+<!-- agentboard:root-entry:end v=1 -->
+
+<!-- agentboard installed + activated 2026-04-17 -->
 # Agentboard — the tool itself
 
 **What this is:** A starter kit that scaffolds a `.platform/` AI-agent context pack into any project, then hands off to an LLM to fill the pack from the actual codebase. No stack pre-picking. No static convention templates. The LLM decides.
@@ -13,16 +28,16 @@ agentboard/
 ├── GEMINI.md              ← this file — rules for working on agentboard itself (Gemini)
 ├── LICENSE                ← MIT
 ├── bin/
-│   └── agentboard         ← bash CLI (init / sync / claim / release / log / status / add-repo)
+│   └── agentboard         ← bash CLI (init / sync / status / add-repo / handoff / checkpoint / usage)
 └── templates/
     ├── platform/          ← copied into <project>/.platform/ by `init`
     │   ├── ONBOARDING.md      (verbatim)
     │   ├── workflow.md        (verbatim)
     │   ├── STATUS.md          (skeletal — placeholders)
     │   ├── architecture.md    (skeletal — placeholders)
-    │   ├── decisions.md       (skeletal — placeholders)
+    │   ├── memory/decisions.md (skeletal — placeholders)
     │   ├── repos.md           (skeletal — placeholders)
-    │   ├── log.md             (skeletal — placeholders)
+    │   ├── memory/log.md       (skeletal — placeholders)
     │   ├── conventions/       (EMPTY — LLM writes per-project)
     │   ├── templates/repo/    (verbatim — per-repo scaffold)
     │   └── scripts/sync-context.sh (verbatim)
@@ -54,9 +69,9 @@ The single most important design decision:
 | `templates/repo/*` | verbatim | Generic per-repo scaffold |
 | `STATUS.md` | placeholder | `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, `{{TODAY}}` |
 | `architecture.md` | placeholder | Structure is generic, content is LLM-written |
-| `decisions.md` | placeholder | Structure is generic, content is LLM-written |
+| `memory/decisions.md` | placeholder | Structure is generic, content is LLM-written |
 | `repos.md` | placeholder | Structure is generic, content is LLM-written |
-| `log.md` | placeholder | Just the header + first seeded line |
+| `memory/log.md` | placeholder | Just the header + first seeded line |
 | `conventions/` | EMPTY | LLM writes one file per detected stack during activation |
 | Root `GEMINI.md.template` | special | The activation prompt itself — replaced post-activation |
 
@@ -87,12 +102,12 @@ The single most important design decision:
 3. **Templates that ship verbatim** (`workflow.md`, `ONBOARDING.md`, `sync-context.sh`, `templates/repo/*`) must be **stack-agnostic**. No React / Django / Unity examples baked in.
 4. **Placeholders use `{{UPPERCASE_SNAKE}}`.** The only three the `init` command fills are `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, `{{TODAY}}`. Everything else is filled by the LLM during activation.
 5. **`sync-context.sh` must stay bash-portable.** macOS default shell must work. No bash 4-only features, no GNU-only flags.
-6. **No runtime dependencies.** Pure file-creation. No API calls, no npm install, no Python venv. If you want the LLM to do something, write it into the activation prompt — don't call an API from the CLI.
-7. **Max ~300 lines per file** (ship the rule by following it).
+6. **No runtime dependencies.** Pure file-creation. No API calls, no npm install, no Python venv. If you want the LLM to do something, write it into the activation prompt — don't call an API from the CLI. One carve-out (decisions.md #5): an *optional* wrapper command may shell out to a user-owned, locally-installed CLI (e.g. `research` → codex) — never a network API — and must die with an actionable message when the binary is absent; no other command may depend on it.
+7. **One complete idea per file** (ship the rule by following it). ~300 lines is the tripwire, not the limit: crossing it forces the question "is this still one idea?" — answer it in the PR. Never split a cohesive idea to satisfy a number. For markdown the LLM loads every session (brief output, INDEX.md, entry files): optimize the load path, not the file — always-loaded surfaces stay lean, depth lives in on-demand files. Use `agentboard usage impact` as a token-use indicator; also consider verification and review effort.
 
 ## Workflow for editing this repo
 
-Follow the 6-stage workflow in `templates/platform/workflow.md`:
+Follow the 6-stage workflow in `.platform/workflow.md` (the shipped source is `templates/platform/workflow.md`):
 1. Triage (type/scope/risk)
 2. Interview (only if ambiguous)
 3. Research (only if medium+ scope)
@@ -100,7 +115,7 @@ Follow the 6-stage workflow in `templates/platform/workflow.md`:
 5. Execute
 6. Verify + log
 
-Plans live in chat, not `.md` files. Every successful task appends one line to a mental log (this repo doesn't have its own `.platform/log.md` — it's the kit, not a project).
+Plans live in chat. Record each task outcome in `.platform/memory/log.md`; this repository uses Agentboard for its own work state.
 
 ## Reference implementation
 

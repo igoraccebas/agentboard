@@ -25,7 +25,7 @@ ANSI terminal color: `\033[38;5;39m[ab-workflow]\033[0m`
 
 ## Purpose
 
-A single orchestration skill that drives a task from "user asked for X" to "X is shipped, tested, and logged". It is the spine of every non-trivial task. It enforces the hard rules: plans in chat (never as `.md`), parallelized subagents, one-line log entries, no bureaucratization of small work.
+A single orchestration skill that drives a task from "user asked for X" to "X is implemented, verified, and logged". Commit and merge require explicit user authorization. It is the spine of every non-trivial task. It enforces the hard rules: plans in chat (never as `.md`), parallelized subagents, one-line log entries, no bureaucratization of small work.
 
 ## When to use
 
@@ -90,18 +90,20 @@ State a 5–10 bullet plan **inline in chat**. Include:
 - **Risk factors** (what could go wrong, for medium+/high risk)
 - **Rollback path** (for high risk)
 
-Wait for user approval. If user pushes back, iterate. If user is silent and risk is `low`, proceed. If risk is `medium+`, explicitly confirm.
+Proceed within the user's existing authorization. If the plan requires a new scope or risk decision that is not already authorized, ask and wait for approval before that work. If the user pushes back, iterate. Silence is not approval; do not request approval again for work already authorized.
 
 **Never** write the plan to a `.md` file. Plans live in chat.
 
 ### Stage 5 — Execute
 
 Write the code. Rules:
-- Atomic commits per logical chunk (don't pile 10 changes into 1 commit)
+- Organize coherent changes per logical chunk for review; do not commit during Stage 5
 - One complete idea per file — ~300 lines is the tripwire to ask "still one idea?", not a hard gate
 - Read before you edit (every time — no exceptions)
 - For specialist work, delegate to the right skill from `.platform/repos.md` routing table
 - If you hit an obstacle, do not brute-force retry. Surface the obstacle to the user and ask.
+
+Implementation subagents write code and report back; do not instruct them to stage or commit changes. The main agent handles any authorized commit after Stage 6 passes.
 
 ### Stage 6 — Verify + Learn
 
@@ -112,6 +114,8 @@ Parallelize verification. Fire in one round:
 - **Check D (always):** re-read the diff once for obvious bugs
 
 If any check fails, loop back to Stage 5.
+
+Present the verification results before any commit or merge. Passing checks or an `ab-review` APPROVE verdict does not authorize either action. Require explicit user authorization for the action, honoring authorization already given for the same scope; if it is absent, ask only after the change and required checks are ready for review. Follow the commit gate in `.platform/workflow.md`.
 
 Once all checks pass, append **one line** to `.platform/memory/log.md`:
 ```
@@ -127,8 +131,9 @@ One sentence of takeaway. Not a paragraph. Not a retrospective.
 3. **Parallelize subagents.** Never run independent subagents sequentially.
 4. **Trivial tasks skip Stages 2–4.**
 5. **Every success logs one line** to `.platform/memory/log.md`.
-6. **High-risk tasks require explicit user approval** between Stage 4 and Stage 5.
+6. **High-risk tasks require explicit user approval** before Stage 5; honor existing approval for the same scope and risk.
 7. **One complete idea per file.** ~300 lines = the question "is this still one idea?", answered in the PR.
+8. **Commit or merge only after required checks pass and the user explicitly authorizes the action.** A review verdict is not user approval.
 
 ## Output format
 

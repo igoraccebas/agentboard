@@ -1,4 +1,5 @@
 source "$AGENTBOARD_ROOT/lib/agentboard/core/base.sh"
+source "$AGENTBOARD_ROOT/lib/agentboard/core/state_lock.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/core/bootstrap_domains.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/core/bootstrap_repos.sh"
 source "$AGENTBOARD_ROOT/lib/agentboard/core/project_state.sh"

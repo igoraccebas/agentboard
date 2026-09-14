@@ -1,8 +1,22 @@
+<!-- agentboard:root-entry:begin v=1 -->
+## Shared workflow
+
+This repository is activated and uses `.platform/` for its own work state.
+Start with `agentboard brief`, then `.platform/work/BRIEF.md` and `.platform/work/ACTIVE.md`.
+Use the user's stated task to choose the stream; ask only when the task is ambiguous.
+Run `agentboard handoff <slug>` before resuming an existing stream.
+Follow `.platform/workflow.md` for registration, verification, analysis, and closure.
+For a stream/feature audit, read its analysis protocol before dispatching reviewers or synthesizing results, and anchor the report in the stream.
+Preserve unrelated edits and provider-specific instructions. Existing task authorization remains valid. Commit and merge require passing checks and explicit owner authorization; honor prior authorization for the same scope. Closure follows the evidence and owner sign-off sequence in `.platform/workflow.md`.
+Checkpoint before ending work. Record only known usage and actual model identity.
+Store lessons through `agentboard fact new`; decisions and session outcomes belong in `.platform/memory/decisions.md` and `.platform/memory/log.md`.
+<!-- agentboard:root-entry:end v=1 -->
+
 # Agentboard — Codex CLI Entry
 
 > Bash CLI for shared work-state across Claude Code, Codex CLI, and Gemini CLI
 
-**Status:** This project was scaffolded by `agentboard init` on 2026-04-17. If not yet activated, say "activate this project" and the agent will read `.platform/ACTIVATE.md`.
+**Status:** Activated. This repository uses `.platform/` to track work on Agentboard itself.
 
 ---
 
@@ -23,7 +37,7 @@ This file is auto-loaded when you open this project in Codex CLI. All mandatory 
 
 If there is an active stream you're resuming, **run `agentboard handoff <slug>`** before anything else — it prints the exact load order and the Resume state (what just happened, current focus, next action) left by the previous agent. This is how context is shared between Claude, Codex, and Gemini without re-explaining.
 
-Report to user: 1 stream → "Resuming **\<stream\>** — next: \<action\>. Continue?" / 2+ streams → ask which / 0 → ask what to work on.
+Use the user's stated task to select or create the stream. Announce the next action; ask which stream only if the task is ambiguous.
 
 ### Context handoff — before ending or switching providers (mandatory)
 
@@ -34,7 +48,7 @@ agentboard checkpoint <stream-slug> --what "<1-2 lines of what just happened>" -
   --cumulative-in <N> --cumulative-out <N> --provider codex --model <model-id> [--complexity trivial|normal|heavy]
 ```
 
-For `--cumulative-in` / `--cumulative-out` pass your **current session totals** (running counters, not per-segment deltas). Agentboard subtracts what was already logged for this stream+provider+day so mid-session logging never double-counts. Omit the token fields if you don't know the counts; the checkpoint itself still works.
+For `--cumulative-in` / `--cumulative-out` pass your **current session totals** (running counters, not per-segment deltas). Pass a stable `--session-id` (or `AGENTBOARD_SESSION_ID`) for this provider session so Agentboard can subtract its previously recorded totals. Omit the token fields if you don't know the counts; the checkpoint itself still works.
 
 This overwrites the stream file's `## Resume state` block with compact "where we are" state and trims the progress log to the last 10 entries. The next agent runs `agentboard handoff <slug>` and picks up from there — **no re-explaining the feature**. Without this, the next agent has only stale state.
 
@@ -47,12 +61,10 @@ When a stream is done, **do not just archive the file**. Run the two-step close 
 agentboard close <stream-slug>
 ```
 
-Then, following the checklist it prints, distill and append to these files (only where applicable — skip categories with nothing to add):
-- `.platform/memory/gotchas.md` — landmines discovered (🔴 never-forget · 🟡 usually-matters · 🟢 minor)
-- `.platform/memory/playbook.md` — shortcuts / rituals / commands worth recording
-- `.platform/memory/open-questions.md` — anything still unresolved (or move a prior question to Resolved)
-- `.platform/memory/decisions.md` — locked architectural/product/tooling decisions
-- `.platform/memory/learnings.md` — non-obvious bug root-causes
+Follow the printed harvest checklist. Record gotchas, practices, questions, and
+root causes with `agentboard fact new` in `.platform/memory/facts/`, tagged with
+the relevant domain and stream. Record locked decisions in
+`.platform/memory/decisions.md`; skip categories with nothing to add.
 
 ```bash
 # Step 2 — after harvest, archive the stream
@@ -97,7 +109,7 @@ When the user gives a task not already tracked in `ACTIVE.md`, **stop and comple
 
 - `.platform/workflow.md` — the 6-stage inline workflow **← read this before running any multi-step protocol**
 - `.platform/ONBOARDING.md` — 7-step onboarding path for future sessions
-- `.platform/memory/learnings.md` — bug post-mortems + hard-won patterns (L-NNN); **grep here first before diagnosing non-obvious bugs**
+- `.platform/memory/facts/` — search relevant learning facts before diagnosing non-obvious bugs; check `.platform/memory/learnings.md` before migration or `.platform/memory/legacy/learnings.md` after migration when present
 
 ## Mandatory Protocol — Stream Audit / Analysis
 
@@ -117,7 +129,10 @@ This applies even when resuming after context compaction. A compressed context s
 2. Wait for explicit human sign-off.
 3. Verify the stream file has `closure_approved: true` before archiving.
 
-**Enforcement:** Claude Code enforces this mechanically via `platform-closure-gate.js` (PreToolUse hook — blocks any edit to `ACTIVE.md` that removes a stream row without `closure_approved: true` in the stream file). Codex CLI and Gemini CLI have no hook system — this rule must be followed through instruction discipline alone. The absence of a mechanical gate does not make it optional.
+**Enforcement:** Agentboard's Claude hooks cover selected operations; other
+provider enforcement must be verified in its native host. The shared CLI checks
+recorded approval and done criteria on `close --confirm`. Editable flags and hooks
+are workflow guardrails, not independent proof of human identity.
 
 Full protocol: `.platform/workflow.md` → "Stream Closure Protocol".
 
@@ -131,4 +146,4 @@ Read each skill's `SKILL.md` on first use to understand its protocol.
 
 ---
 
-_Generated by agentboard on 2026-04-17. After activation, this file will be updated with project-specific content by sync-context.sh._
+_The managed shared block is synchronized by `.platform/scripts/sync-context.sh`; provider-specific instructions outside it are preserved._

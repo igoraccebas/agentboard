@@ -80,8 +80,7 @@ cmd_research() {
   rm -f "$out_file"
   [[ -n "$findings" ]] || die "codex returned an empty final message — no findings were written."
 
-  _research_append_notes "$stream_file" "$prompt" "$web" "$findings"
-  set_frontmatter_value "$stream_file" "updated_at" "$(today)"
+  with_state_lock _research_commit "$stream_file" "$prompt" "$web" "$findings" || return 1
 
   local elapsed=$(( $(date +%s) - started ))
   ok "research notes appended → .platform/work/${slug}.md (${elapsed}s)"
@@ -115,6 +114,16 @@ EOF
 # _research_append_notes <stream_file> <prompt> <web> <findings>
 # Append a dated block to ## Research notes (append-mode — runs accumulate,
 # never overwrite). Creates the section before ## Progress log when absent.
+_research_commit() {
+  local stream_file="$1" staged
+  [[ -f "$stream_file" ]] || { warn "Research target was closed or removed; rerun against an active stream."; return 1; }
+  staged="$(mktemp "$(dirname "$stream_file")/.research.XXXXXX")" || return 1
+  cp -p "$stream_file" "$staged" &&
+    _research_append_notes "$staged" "$2" "$3" "$4" &&
+    set_frontmatter_value "$staged" updated_at "$(today)" &&
+    mv "$staged" "$stream_file" || { rm -f "$staged"; return 1; }
+}
+
 _research_append_notes() {
   local stream_file="$1" prompt="$2" web="$3" findings="$4"
   local stamp summary web_tag="" tmp block_file
@@ -122,20 +131,21 @@ _research_append_notes() {
   summary="$(printf '%.60s' "$prompt")"
   [[ "$web" == "1" ]] && web_tag=" [web]"
 
-  block_file="$(mktemp)"
+  block_file="$(mktemp)" || return 1
   {
-    printf '### %s — %s%s\n\n' "$stamp" "$summary" "$web_tag"
+    printf '### %s — %s%s\n\n' "$stamp" "$summary" "$web_tag" &&
     printf '%s\n' "$findings"
-  } > "$block_file"
+  } > "$block_file" || { rm -f "$block_file"; return 1; }
 
-  tmp="$(mktemp)"
+  tmp="$(mktemp)" || { rm -f "$block_file"; return 1; }
   if grep -q '^## Research notes[[:space:]]*$' "$stream_file"; then
     # Append at the end of the existing section (before the next ## heading).
     awk -v block_file="$block_file" '
       BEGIN { in_section = 0; inserted = 0 }
       /^## Research notes[[:space:]]*$/ { in_section = 1; print; next }
       in_section && /^## / && !inserted {
-        while ((getline line < block_file) > 0) print line
+        while ((read_status = (getline line < block_file)) > 0) print line
+        if (read_status < 0) { failed = 1; exit 1 }
         close(block_file)
         print ""
         inserted = 1; in_section = 0
@@ -143,28 +153,31 @@ _research_append_notes() {
       }
       { print }
       END {
+        if (failed) exit 1
         if (in_section && !inserted) {
-          while ((getline line < block_file) > 0) print line
+          while ((read_status = (getline line < block_file)) > 0) print line
+          if (read_status < 0) exit 1
         }
       }
-    ' "$stream_file" > "$tmp"
+    ' "$stream_file" > "$tmp" || return 1
   elif grep -q '^## Progress log[[:space:]]*$' "$stream_file"; then
     awk -v block_file="$block_file" '
       BEGIN { inserted = 0 }
       /^## Progress log[[:space:]]*$/ && !inserted {
         print "## Research notes"
         print ""
-        while ((getline line < block_file) > 0) print line
+        while ((read_status = (getline line < block_file)) > 0) print line
+        if (read_status < 0) exit 1
         close(block_file)
         print ""
         inserted = 1
       }
       { print }
-    ' "$stream_file" > "$tmp"
+    ' "$stream_file" > "$tmp" || return 1
   else
-    cat "$stream_file" > "$tmp"
-    printf '\n## Research notes\n\n' >> "$tmp"
-    cat "$block_file" >> "$tmp"
+    cat "$stream_file" > "$tmp" || return 1
+    printf '\n## Research notes\n\n' >> "$tmp" || return 1
+    cat "$block_file" >> "$tmp" || return 1
   fi
 
   rm -f "$block_file"

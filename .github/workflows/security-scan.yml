@@ -168,8 +168,7 @@ jobs:
           findings=0
           tmp_hits="$(mktemp)"
 
-          # Assemble the script list: bin/agentboard + all .sh files under
-          # templates/platform/scripts/. Skip gracefully if either is absent.
+          # Include the launcher, implementation, and shipped scripts.
           files=()
           if [ -f bin/agentboard ]; then
             files+=("bin/agentboard")
@@ -178,6 +177,11 @@ jobs:
             while IFS= read -r f; do
               files+=("$f")
             done < <(find templates/platform/scripts -type f -name '*.sh' | sort)
+          fi
+          if [ -d lib ]; then
+            while IFS= read -r f; do
+              files+=("$f")
+            done < <(find lib -type f -name '*.sh' | sort)
           fi
 
           if [ "${#files[@]}" -eq 0 ]; then

@@ -73,13 +73,17 @@ COMMANDS
                              --tokens-in N --tokens-out N --provider <p>
                              [--model <m>] [--complexity <c>]
                                                auto-log a usage segment
+                             --cumulative-in N --cumulative-out N
+                                               log session totals instead
+                             --session-id <id> stable provider session ID
   approve <stream-slug>      Human gate of the plan→approve→execute loop.
-                             The ab-planner agent (Opus) writes an
+                             The configured planner writes an
                              ## Execution brief into the stream file; this
                              command flips brief_approved: true so the
-                             execution model (e.g. Fable 5) may write code.
+                             configured execution model may write code.
                              In Claude Code the bash-guard turns it into a
-                             yes/no click — the LLM cannot self-approve.
+                             native approval prompt for recognized commands.
+                             Local metadata is a workflow guardrail.
                              --revoke          plan changed: stop execution
   close <stream-slug>        Finalize a stream. Two-step ritual:
                              1. bare run prints the harvest checklist —
@@ -87,6 +91,8 @@ COMMANDS
                                 `agentboard fact new`; decisions go to
                                 memory/decisions.md (the registry).
                              2. --confirm archives the stream and logs closure.
+                                Requires recorded closure_approved: true
+                                and no unchecked Done criteria.
                              --dry-run         preview --confirm actions
   brief                      Print the compact project briefing — active
                              streams, gotchas, facts in scope (domain-scoped),
@@ -158,6 +164,9 @@ COMMANDS
                                --provider <name> --input <N> --output <N>
                                [--model <M>] [--stream <S>] [--repo <R>]
                                [--type <T>] [--note <text>]
+                               [--session-id <id>] (or AGENTBOARD_SESSION_ID)
+                               Use --cumulative-in N --cumulative-out N
+                               instead of --input/--output for session totals.
                              stream <slug> — full breakdown for one stream
                              history       — last 20 segments
                              optimize      — most expensive streams/types/providers
@@ -177,4 +186,3 @@ PHILOSOPHY
   write based on your actual codebase during activation.
 EOF
 }
-

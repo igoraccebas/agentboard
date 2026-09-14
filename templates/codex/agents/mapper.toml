@@ -1,6 +1,5 @@
 name                   = "mapper"
 description            = "Fast file discovery, grep, glob — trivial mechanical ops"
-model                  = "codex-4-5"
 model_reasoning_effort = "low"
 sandbox_mode           = "read-only"
 developer_instructions = """

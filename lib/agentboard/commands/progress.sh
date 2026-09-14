@@ -1,4 +1,8 @@
 cmd_progress() {
+  with_state_lock _cmd_progress "$@"
+}
+
+_cmd_progress() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
 
   local slug="${1:-}"

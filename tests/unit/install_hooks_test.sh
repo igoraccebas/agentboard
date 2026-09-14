@@ -71,11 +71,11 @@ test_guard_skips_non_bash_tool() {
   [[ -z "$out" ]] || fail "expected empty output for non-Bash tool"
 }
 
-test_guard_empty_input_does_not_crash() {
-  local out status
-  out="$(_guard_run '' 2>&1)" || true
-  status=$?
-  (( status == 0 )) || fail "guard should exit 0 on empty input, got $status"
+test_guard_empty_input_does_not_block() {
+  local out status=0
+  out="$(_guard_run '' 2>&1)" || status=$?
+  (( status != 2 )) || fail "guard must never block (exit 2) on empty input"
+  [[ "$out" != *permissionDecision* ]] || fail "guard emitted a decision for empty input"
 }
 
 # ─── install-hooks command behavior ───────────────────────────────────────
@@ -200,7 +200,7 @@ for t in \
   test_guard_blocks_rm_rf \
   test_guard_blocks_git_branch_delete \
   test_guard_skips_non_bash_tool \
-  test_guard_empty_input_does_not_crash \
+  test_guard_empty_input_does_not_block \
   test_install_hooks_writes_both_artifacts \
   test_install_hooks_idempotent_when_already_present \
   test_install_hooks_refuses_to_overwrite_unknown_settings \

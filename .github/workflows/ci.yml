@@ -66,15 +66,30 @@ jobs:
           set -euo pipefail
           bash tests/integration.sh
 
+  macos-tests:
+    name: macos-tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test with stock macOS Bash
+        shell: bash
+        run: /bin/bash tests/test.sh
+
   ci-gate:
     name: ci-gate
     runs-on: ubuntu-latest
     needs:
       - unit-tests
       - integration-tests
+      - macos-tests
     steps:
       - name: Confirm merge gate is green
         shell: bash
         run: |
           set -euo pipefail
-          echo "unit-tests and integration-tests passed."
+          echo "Ubuntu unit/integration tests and stock macOS Bash tests passed."

@@ -20,6 +20,9 @@ setup_close_fixture() {
     "$TEST_ROOT/bin/agentboard" new-domain auth >/dev/null
     "$TEST_ROOT/bin/agentboard" new-stream login \
       --domain auth --base-branch main --branch feat/login >/dev/null
+    # Model the owner's completed review before testing finalization.
+    replace_frontmatter_line .platform/work/login.md closure_approved true
+    replace_template_literals .platform/work/login.md '\[ \]' '[x]'
   )
 }
 

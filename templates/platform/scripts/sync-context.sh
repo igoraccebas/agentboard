@@ -1,201 +1,72 @@
 #!/usr/bin/env bash
-# sync-context.sh — keep CLAUDE.md / AGENTS.md / GEMINI.md in sync across all platform repos.
-#
-# Design
-# ------
-#   Source of truth per repo: CLAUDE.md
-#   Derived (auto-generated):  AGENTS.md   (Codex CLI variant)
-#                              GEMINI.md   (Gemini CLI variant)
-#
-#   The 3 files are IDENTICAL except for two substitutions per variant:
-#     1. Header line:  "Claude Code Entry"  ->  "Codex CLI Entry" | "Gemini CLI Entry"
-#     2. Self-reference path: "<repo>/CLAUDE.md"  ->  "<repo>/AGENTS.md" | "<repo>/GEMINI.md"
-#        (repo name is inferred dynamically — no hardcoding needed)
-#
-# Modes
-# -----
-#   ./sync-context.sh             # CHECK mode (default). Shows drift, exits non-zero on any.
-#   ./sync-context.sh --apply     # APPLY mode. Overwrites AGENTS.md + GEMINI.md from CLAUDE.md.
-#   ./sync-context.sh --list      # Show which repos will be touched and exit.
-#   ./sync-context.sh --help      # This help text.
-#
-# Exit codes
-# ----------
-#   0  — everything in sync (or --apply succeeded)
-#   1  — drift detected (check mode only)
-#   2  — invocation error (bad flag, missing source, etc.)
-#
-# Adding a new repo
-# -----------------
-#   Append its absolute path to the REPOS array below. That's it — as long as
-#   the repo has a CLAUDE.md at its root the script will keep its AGENTS.md
-#   and GEMINI.md in sync on every run.
-
+# Sync only the managed root-entry block. Preserve all provider-owned text.
+# Legacy source: wrap shared rules in begin/end v=1 markers before syncing.
 set -euo pipefail
-
-# ---------------------------------------------------------------------------
-# Config — list every repo that carries a CLAUDE.md / AGENTS.md / GEMINI.md entry file.
-# The first entry auto-detects the repo that contains this script (the platform repo).
-# For multi-repo projects, add the other repos below with absolute paths.
-# ---------------------------------------------------------------------------
 REPOS=(
-  # Auto-detected: the repo containing this script.
   "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  # Add more repos here:
-  # "/absolute/path/to/backend-repo"
-  # "/absolute/path/to/frontend-repo"
 )
-
-# ---------------------------------------------------------------------------
-# Colors (safe on a plain terminal; fall back to empty strings if no TTY)
-# ---------------------------------------------------------------------------
-if [[ -t 1 ]]; then
-  C_RED=$'\033[31m'
-  C_GREEN=$'\033[32m'
-  C_YELLOW=$'\033[33m'
-  C_CYAN=$'\033[36m'
-  C_DIM=$'\033[2m'
-  C_RESET=$'\033[0m'
-else
-  C_RED=""; C_GREEN=""; C_YELLOW=""; C_CYAN=""; C_DIM=""; C_RESET=""
-fi
-
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
-MODE="check"
-case "${1:-}" in
-  "")       MODE="check" ;;
-  --apply)  MODE="apply" ;;
-  --list)   MODE="list" ;;
-  --help|-h)
-    sed -n '2,/^set -euo pipefail/p' "$0" | sed -e 's/^# \{0,1\}//' -e '/^set -euo pipefail$/d'
-    exit 0
-    ;;
-  *)
-    echo "${C_RED}error:${C_RESET} unknown flag '$1'"
-    echo "usage: $0 [--apply|--list|--help]"
-    exit 2
-    ;;
+MODE="${1:---check}"
+case "$MODE" in
+  --check|--apply) ;;
+  --list) printf '%s\n' "${REPOS[@]}"; exit 0 ;;
+  --help|-h) printf '%s\n' 'Usage: sync-context.sh [--check|--apply|--list]' 'Only managed root-entry blocks are synchronized; custom instructions are preserved.'; exit 0 ;;
+  *) printf 'Unknown flag: %s\n' "$MODE" >&2; exit 2 ;;
 esac
-
-# ---------------------------------------------------------------------------
-# List mode — show what will be synced and exit.
-# ---------------------------------------------------------------------------
-if [[ "$MODE" == "list" ]]; then
-  echo "${C_CYAN}sync-context.sh${C_RESET} will operate on these repos:"
-  for repo in "${REPOS[@]}"; do
-    if [[ -f "$repo/CLAUDE.md" ]]; then
-      echo "  ${C_GREEN}✓${C_RESET} $repo"
-    else
-      echo "  ${C_YELLOW}?${C_RESET} $repo ${C_DIM}(no CLAUDE.md — will be skipped)${C_RESET}"
-    fi
-  done
-  exit 0
-fi
-
-# ---------------------------------------------------------------------------
-# Substitution helpers — emit the derived content to stdout.
-# Uses POSIX sed so it works on both macOS (BSD sed) and Linux (GNU sed).
-# Repo name is inferred from the source path — no hardcoding required.
-# ---------------------------------------------------------------------------
-generate_agents() {
-  local src="$1"
-  local name; name="$(basename "$(dirname "$src")")"
-  sed -e 's/Claude Code Entry/Codex CLI Entry/g' \
-      -e "s|${name}/CLAUDE\\.md|${name}/AGENTS.md|g" \
-      "$src"
-}
-
-generate_gemini() {
-  local src="$1"
-  local name; name="$(basename "$(dirname "$src")")"
-  sed -e 's/Claude Code Entry/Gemini CLI Entry/g' \
-      -e "s|${name}/CLAUDE\\.md|${name}/GEMINI.md|g" \
-      "$src"
-}
-
-# ---------------------------------------------------------------------------
-# Main loop
-# ---------------------------------------------------------------------------
-drift_count=0
-write_count=0
-skip_count=0
-
+command -v node >/dev/null 2>&1 || { printf 'sync-context requires node\n' >&2; exit 2; }
+status=0
 for repo in "${REPOS[@]}"; do
-  source="$repo/CLAUDE.md"
-  label="${repo##*/}"
-
-  if [[ ! -f "$source" ]]; then
-    echo "${C_YELLOW}SKIP${C_RESET}    $label ${C_DIM}(no CLAUDE.md)${C_RESET}"
-    skip_count=$((skip_count + 1))
-    continue
-  fi
-
-  for variant in AGENTS GEMINI; do
-    target="$repo/${variant}.md"
-    tmp=$(mktemp)
-
-    case "$variant" in
-      AGENTS) generate_agents "$source" > "$tmp" ;;
-      GEMINI) generate_gemini "$source" > "$tmp" ;;
-    esac
-
-    if [[ -f "$target" ]]; then
-      if cmp -s "$tmp" "$target"; then
-        echo "${C_GREEN}OK${C_RESET}      $label/${variant}.md"
-      else
-        drift_count=$((drift_count + 1))
-        echo "${C_YELLOW}DRIFT${C_RESET}   $label/${variant}.md"
-        if [[ "$MODE" == "apply" ]]; then
-          cp "$tmp" "$target"
-          write_count=$((write_count + 1))
-          echo "        ${C_DIM}→ rewrote from CLAUDE.md${C_RESET}"
-        else
-          diff -u "$target" "$tmp" | sed -n '4,20p' | sed 's/^/        /' || true
-          echo "        ${C_DIM}...run with --apply to fix${C_RESET}"
-        fi
-      fi
-    else
-      drift_count=$((drift_count + 1))
-      echo "${C_YELLOW}MISSING${C_RESET} $label/${variant}.md"
-      if [[ "$MODE" == "apply" ]]; then
-        cp "$tmp" "$target"
-        write_count=$((write_count + 1))
-        echo "        ${C_DIM}→ created from CLAUDE.md${C_RESET}"
-      fi
-    fi
-
-    rm -f "$tmp"
-  done
+  [[ -f "$repo/CLAUDE.md" ]] || { printf 'SKIP %s (no CLAUDE.md)\n' "$repo"; continue; }
+  result=0
+  node - "$repo" "$MODE" <<'NODE' || result=$?
+const fs = require('fs'), path = require('path'), crypto = require('crypto');
+const [repo, mode] = process.argv.slice(2);
+const begin = '<!-- agentboard:root-entry:begin v=1 -->';
+const end = '<!-- agentboard:root-entry:end v=1 -->';
+function span(text, required) {
+  const first=text.indexOf(begin), last=text.indexOf(end);
+  if (first<0 && last<0 && !required) return null;
+  if (first<0 || last<first || text.indexOf(begin, first+begin.length)>=0 ||
+      text.indexOf(end, last+end.length)>=0) {
+    throw new Error('Expected one complete managed block: ' + begin + ' ... ' + end +
+      '. Wrap only shared rules in CLAUDE.md; keep provider-specific rules outside.');
+  }
+  return [first,last+end.length];
+}
+try {
+  const source=fs.readFileSync(path.join(repo,'CLAUDE.md'),'utf8');
+  const sourceSpan=span(source,true);
+  const shared=source.slice(...sourceSpan);
+  // Validate every target before any write.
+  const changes=['AGENTS','GEMINI'].map(variant => {
+    const target=path.join(repo,variant+'.md');
+    if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink())
+      throw new Error('Refusing symlink target: '+target);
+    const original=fs.existsSync(target) ? fs.readFileSync(target,'utf8') : '';
+    const range=span(original,false);
+    const block=shared.replaceAll('Claude Code Entry', variant==='AGENTS' ? 'Codex CLI Entry' : 'Gemini CLI Entry');
+    const next=range ? original.slice(0,range[0])+block+original.slice(range[1])
+      : block+'\n'+(original ? '\n'+original : '');
+    return {target,original,next};
+  });
+  let drift=false;
+  for (const {target,original,next} of changes) {
+    if (original===next) { console.log('OK '+target); continue; }
+    drift=true;
+    if (mode==='--apply') {
+      const tmp=target+'.agentboard-'+crypto.randomUUID();
+      try {
+        fs.writeFileSync(tmp,next,{flag:'wx',mode:fs.existsSync(target) ? fs.statSync(target).mode : 0o644});
+        fs.renameSync(tmp,target);
+      } finally { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); }
+      console.log('Synced managed block: '+target);
+    } else console.log('DRIFT '+target+' (run --apply)');
+  }
+  if (drift && mode!=='--apply') process.exitCode=1;
+} catch (error) {
+  console.error(error.message);
+  process.exitCode=2;
+}
+NODE
+  (( result <= status )) || status="$result"
 done
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
-echo ""
-if [[ "$MODE" == "apply" ]]; then
-  if [[ $drift_count -eq 0 ]]; then
-    echo "${C_GREEN}All entry files already in sync.${C_RESET} (no writes)"
-  else
-    echo "${C_GREEN}Synced ${write_count} file(s).${C_RESET}"
-    if [[ $skip_count -gt 0 ]]; then
-      echo "${C_DIM}Skipped ${skip_count} repo(s) without a CLAUDE.md.${C_RESET}"
-    fi
-    echo ""
-    echo "${C_CYAN}Next steps:${C_RESET}"
-    echo "  1. Review the changes:   ${C_DIM}git diff${C_RESET}"
-    echo "  2. Commit each repo separately (they are independent git repos)"
-  fi
-  exit 0
-fi
-
-# Check mode
-if [[ $drift_count -eq 0 ]]; then
-  echo "${C_GREEN}All entry files in sync.${C_RESET}"
-  exit 0
-else
-  echo "${C_RED}Drift detected:${C_RESET} ${drift_count} file(s) out of sync."
-  echo "Run: ${C_CYAN}$0 --apply${C_RESET}"
-  exit 1
-fi
+exit "$status"

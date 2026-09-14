@@ -46,6 +46,20 @@ cmd_new_domain() {
 }
 
 cmd_new_stream() {
+  with_state_lock _new_stream_transaction "$@"
+}
+
+_new_stream_transaction() {
+  [[ -d ./.platform ]] || { _cmd_new_stream "$@"; return $?; }
+  local slug="${1:-}"
+  [[ "$slug" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { _cmd_new_stream "$@"; return $?; }
+  local -a stream_args=("$@")
+  _new_stream_commit() { _cmd_new_stream "${stream_args[@]}"; }
+  state_transaction _new_stream_commit "./.platform/work/${slug}.md" \
+    ./.platform/work/ACTIVE.md ./.platform/work/BRIEF.md
+}
+
+_cmd_new_stream() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
 
   local slug="${1:-}"
@@ -151,41 +165,41 @@ cmd_new_stream() {
   domain_slugs_literal="$(frontmatter_inline_array <<< "$domain_slugs_text")"
   repo_ids_literal="$(frontmatter_inline_array <<< "$repo_ids_text")"
 
-  cp "$stream_template" "$stream_target"
+  cp "$stream_template" "$stream_target" || return 1
   replace_template_literals "$stream_target" \
     "<stream-slug>" "$slug" \
     "type: feature" "type: $stream_type" \
     "agent_owner: claude-code" "agent_owner: $agent_owner" \
     "status: planning" "status: planning" \
-    "YYYY-MM-DD" "$(today)"
-  replace_frontmatter_line "$stream_target" "domain_slugs" "$domain_slugs_literal"
-  replace_frontmatter_line "$stream_target" "repo_ids" "$repo_ids_literal"
-  replace_frontmatter_line "$stream_target" "base_branch" "$base_branch"
-  replace_frontmatter_line "$stream_target" "git_branch" "$git_branch"
+    "YYYY-MM-DD" "$(today)" || return 1
+  replace_frontmatter_line "$stream_target" "domain_slugs" "$domain_slugs_literal" || return 1
+  replace_frontmatter_line "$stream_target" "repo_ids" "$repo_ids_literal" || return 1
+  replace_frontmatter_line "$stream_target" "base_branch" "$base_branch" || return 1
+  replace_frontmatter_line "$stream_target" "git_branch" "$git_branch" || return 1
 
   local row="| $slug | $stream_type | planning | $agent_owner | $(today) |"
   if grep -qF "| _(none)_ | — | — | — | — |" "$active"; then
     local tmp
-    tmp="$(mktemp)"
+    tmp="$(mktemp)" || return 1
     awk -v row="$row" '
       $0 == "| _(none)_ | — | — | — | — |" { print row; next }
       { print }
-    ' "$active" > "$tmp"
-    mv "$tmp" "$active"
+    ' "$active" > "$tmp" || return 1
+    mv "$tmp" "$active" || return 1
   elif grep -qF "| $slug |" "$active"; then
     die "work/ACTIVE.md already has a row for '$slug'"
   else
     local tmp
-    tmp="$(mktemp)"
+    tmp="$(mktemp)" || return 1
     awk -v row="$row" '
       /^---$/ && !inserted { print row; inserted=1 }
       { print }
-    ' "$active" > "$tmp"
-    mv "$tmp" "$active"
+    ' "$active" > "$tmp" || return 1
+    mv "$tmp" "$active" || return 1
   fi
 
   if brief_is_placeholder "$brief"; then
-    write_brief_stub "$brief" "$project_name" "$slug" "$domain_slugs_text" "planning"
+    write_brief_stub "$brief" "$project_name" "$slug" "$domain_slugs_text" "planning" || return 1
     ok "Updated work/BRIEF.md with a starter brief"
   else
     warn "work/BRIEF.md already has content. Stream created, but BRIEF.md was left untouched."
@@ -548,4 +562,3 @@ EOF
   printf '     %sagentboard checkpoint %s --what "..." --next "..."%s\n' "$C_BOLD" "$slug" "$C_RESET"
   say
 }
-

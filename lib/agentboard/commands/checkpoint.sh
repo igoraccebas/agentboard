@@ -1,4 +1,8 @@
 cmd_checkpoint() {
+  with_state_lock _cmd_checkpoint "$@"
+}
+
+_cmd_checkpoint() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
 
   local slug="${1:-}"
@@ -14,7 +18,7 @@ cmd_checkpoint() {
   local what="" next_action="" blocker="" focus="" include_diff=0 dry_run=0 auto=0
   local explicit_blocker=0 explicit_focus=0
   local tokens_in="" tokens_out="" provider="" model="" complexity=""
-  local cum_in="" cum_out=""
+  local cum_in="" cum_out="" session_id="${AGENTBOARD_SESSION_ID:-}"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --what)
@@ -53,6 +57,9 @@ cmd_checkpoint() {
       --complexity)
         [[ -n "${2:-}" ]] || die "checkpoint requires a value after --complexity"
         complexity="$2"; shift 2 ;;
+      --session-id)
+        [[ -n "${2:-}" ]] || die "checkpoint requires a value after --session-id"
+        session_id="$2"; shift 2 ;;
       -h|--help)
         cat <<'EOF'
 Usage: agentboard checkpoint <stream-slug> --what "..." --next "..." [flags]
@@ -84,6 +91,7 @@ Usage tracking (auto-log a token segment when provider + tokens given):
                            mid-session logging without double-counting.
   --cumulative-out N       Running TOTAL output tokens since session start.
   --provider <name>        claude | codex | gemini  (or $AGENTBOARD_PROVIDER)
+  --session-id <id>        Stable ID for this provider session (or $AGENTBOARD_SESSION_ID).
   --model <name>           model id (or $AGENTBOARD_MODEL)
   --complexity <t>         trivial | normal | heavy  (helps 'learn' detect overkill)
 
@@ -182,9 +190,16 @@ EOF
     return 0
   fi
 
-  _checkpoint_write_resume_state "$stream_file" "$resume_block"
-  _checkpoint_prepend_progress_entry "$stream_file" "$log_entry"
-  replace_frontmatter_line "$stream_file" "updated_at" "$today_str"
+  _checkpoint_commit() {
+    local staged
+    staged="$(mktemp "$(dirname "$stream_file")/.checkpoint.XXXXXX")" || return 1
+    cp -p "$stream_file" "$staged" &&
+      _checkpoint_write_resume_state "$staged" "$resume_block" &&
+      _checkpoint_prepend_progress_entry "$staged" "$log_entry" &&
+      replace_frontmatter_line "$staged" "updated_at" "$today_str" &&
+      mv "$staged" "$stream_file" || { rm -f "$staged"; return 1; }
+  }
+  _checkpoint_commit || return 1
 
   ok "Checkpoint saved to $stream_file"
   say "  ${C_DIM}next:${C_RESET} ${next_action}"
@@ -291,15 +306,19 @@ _checkpoint_auto_log_usage() {
   fi
   [[ -n "$model" ]] && usage_args+=(--model "$model")
   [[ -n "$complexity" ]] && usage_args+=(--type "$complexity")
+  [[ -n "${session_id:-}" ]] && usage_args+=(--session-id "$session_id")
   local note="checkpoint: ${what:0:80}"
   usage_args+=(--note "$note")
 
-  if cmd_usage "${usage_args[@]}" >/dev/null 2>&1; then
+  if cmd_usage "${usage_args[@]}" >/dev/null; then
     if [[ "$mode" == "cumulative" ]]; then
       say "  ${C_DIM}usage logged: ${provider}${model:+/$model} — cumulative ${cum_in} in / ${cum_out} out (delta auto-computed)${C_RESET}"
     else
       say "  ${C_DIM}usage logged: ${provider}${model:+/$model} — ${tokens_in} in / ${tokens_out} out${C_RESET}"
     fi
+  else
+    warn "Checkpoint saved, but usage logging failed. Retry the usage log separately."
+    return 0
   fi
 }
 
@@ -309,16 +328,17 @@ _checkpoint_auto_log_usage() {
 _checkpoint_write_resume_state() {
   local file="$1" new_block="$2"
   local tmp block_file
-  tmp="$(mktemp)"
-  block_file="$(mktemp)"
-  printf '%s\n' "$new_block" > "$block_file"
+  tmp="$(mktemp)" || return 1
+  block_file="$(mktemp)" || { rm -f "$tmp"; return 1; }
+  printf '%s\n' "$new_block" > "$block_file" || { rm -f "$tmp" "$block_file"; return 1; }
 
   if grep -q '^## Resume state[[:space:]]*$' "$file"; then
     awk -v block_file="$block_file" '
       BEGIN { in_section = 0; printed = 0 }
       /^## Resume state[[:space:]]*$/ {
         if (!printed) {
-          while ((getline line < block_file) > 0) print line
+          while ((read_status = (getline line < block_file)) > 0) print line
+          if (read_status < 0) exit 1
           close(block_file)
           printed = 1
         }
@@ -328,34 +348,36 @@ _checkpoint_write_resume_state() {
       in_section && /^## / { in_section = 0; print ""; print; next }
       in_section { next }
       { print }
-    ' "$file" > "$tmp"
+    ' "$file" > "$tmp" || return 1
   elif grep -q '^## Progress log[[:space:]]*$' "$file"; then
     awk -v block_file="$block_file" '
       BEGIN { inserted = 0 }
       /^## Progress log[[:space:]]*$/ && !inserted {
-        while ((getline line < block_file) > 0) print line
+        while ((read_status = (getline line < block_file)) > 0) print line
+        if (read_status < 0) exit 1
         close(block_file)
         print ""
         inserted = 1
       }
       { print }
-    ' "$file" > "$tmp"
+    ' "$file" > "$tmp" || return 1
   elif grep -q '^## Next action[[:space:]]*$' "$file"; then
     awk -v block_file="$block_file" '
       BEGIN { inserted = 0 }
       /^## Next action[[:space:]]*$/ && !inserted {
-        while ((getline line < block_file) > 0) print line
+        while ((read_status = (getline line < block_file)) > 0) print line
+        if (read_status < 0) exit 1
         close(block_file)
         print ""
         inserted = 1
       }
       { print }
-    ' "$file" > "$tmp"
+    ' "$file" > "$tmp" || return 1
   else
-    cat "$file" > "$tmp"
-    printf '\n' >> "$tmp"
-    cat "$block_file" >> "$tmp"
-    printf '\n' >> "$tmp"
+    cat "$file" > "$tmp" || return 1
+    printf '\n' >> "$tmp" || return 1
+    cat "$block_file" >> "$tmp" || return 1
+    printf '\n' >> "$tmp" || return 1
   fi
 
   rm -f "$block_file"
@@ -368,20 +390,20 @@ _checkpoint_write_resume_state() {
 _checkpoint_prepend_progress_entry() {
   local file="$1" entry="$2"
   local tmp entry_file
-  tmp="$(mktemp)"
-  entry_file="$(mktemp)"
-  printf '%s\n' "$entry" > "$entry_file"
+  tmp="$(mktemp)" || return 1
+  entry_file="$(mktemp)" || { rm -f "$tmp"; return 1; }
+  printf '%s\n' "$entry" > "$entry_file" || { rm -f "$tmp" "$entry_file"; return 1; }
 
   if ! grep -q '^## Progress log[[:space:]]*$' "$file"; then
     {
-      cat "$file"
-      printf '\n## Progress log\n_Append-only. Auto-trimmed by `agentboard checkpoint` to last 10 entries._\n\n'
-      cat "$entry_file"
+      cat "$file" &&
+      printf '\n## Progress log\n_Append-only. Auto-trimmed by `agentboard checkpoint` to last 10 entries._\n\n' &&
+      cat "$entry_file" &&
       printf '\n'
-    } > "$tmp"
+    } > "$tmp" || return 1
     rm -f "$entry_file"
     mv "$tmp" "$file"
-    return 0
+    return $?
   fi
 
   awk -v entry_file="$entry_file" '
@@ -398,7 +420,8 @@ _checkpoint_prepend_progress_entry() {
     in_log && !inserted {
       # Insert the new entry before existing log lines. The entry starts with
       # a YYYY-MM-DD date line so it counts as entry 1 for the 10-entry cap.
-      while ((getline line < entry_file) > 0) print line
+      while ((read_status = (getline line < entry_file)) > 0) print line
+      if (read_status < 0) { failed = 1; exit 1 }
       close(entry_file)
       print ""
       inserted = 1
@@ -419,12 +442,14 @@ _checkpoint_prepend_progress_entry() {
     }
     { print }
     END {
+      if (failed) exit 1
       if (in_log && !inserted) {
-        while ((getline line < entry_file) > 0) print line
+        while ((read_status = (getline line < entry_file)) > 0) print line
+        if (read_status < 0) exit 1
         close(entry_file)
       }
     }
-  ' "$file" > "$tmp"
+  ' "$file" > "$tmp" || return 1
 
   rm -f "$entry_file"
   mv "$tmp" "$file"

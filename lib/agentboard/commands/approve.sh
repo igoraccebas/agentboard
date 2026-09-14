@@ -2,10 +2,14 @@
 #
 # The planner model (Opus) writes an `## Execution brief` into the stream
 # file; nothing executes until a human flips brief_approved. The bash-guard
-# hook intercepts this command in Claude Code, so the approving click is
-# always yours — the LLM cannot approve its own plan.
+# hook requests native approval for recognized commands in Claude Code.
+# Editable local metadata is a workflow guardrail, not proof of human identity.
 
 cmd_approve() {
+  with_state_lock _cmd_approve "$@"
+}
+
+_cmd_approve() {
   [[ -d "./.platform" ]] || die "No .platform/ found. Run 'agentboard init' first."
 
   local slug="${1:-}"
@@ -71,9 +75,9 @@ Human approval gate for the plan→execute loop:
      objective, do/don't lines, files in scope, acceptance criteria —
      and sets brief_approved: false.
   2. A human reviews the brief and runs this command (in Claude Code, the
-     bash-guard hook turns it into a yes/no click — the LLM cannot
-     self-approve).
-  3. The execution model (e.g. Fable 5) implements within the brief.
+     bash-guard hook requests native approval for recognized commands).
+     Local files remain editable; the workflow requires actual owner sign-off.
+  3. The configured execution model implements within the brief.
      `agentboard handoff` shows the gate status to every resuming agent.
 
 Flags:

@@ -1,14 +1,13 @@
 name                   = "coder"
 description            = "Implementation — writes and edits production code"
-model                  = "codex-4-5"
 model_reasoning_effort = "high"
-sandbox_mode           = "full"
+sandbox_mode           = "workspace-write"
 developer_instructions = """
 You are an implementation agent. Write correct, minimal, well-scoped code.
 
 Before writing code: read the relevant domain file from .platform/domains/.
 After writing: run tests if a test command is available.
 
-At the end of your session log token usage:
-  agentboard usage log --provider codex --model codex-4-5 --stream <slug> --type implementation --input <N> --output <N> --note "<what you implemented>"
+Report actual token usage and the selected model to the parent when available.
+Do not invent counters or model IDs.
 """

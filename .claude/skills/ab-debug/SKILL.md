@@ -55,13 +55,13 @@ First seen: <when did this start, if known>
 Recent changes: <what changed in the area lately, from git log>
 ```
 
-If any field is blank, ask. Do not debug without a repro.
+Mark unknown fields explicitly. Ask for missing information when it blocks investigation; otherwise gather evidence to establish a repro before fixing.
 
 ### Step 2 — Reproduce locally
 
 Run the repro steps in the dev environment. **Do not skip this step.**
 
-If you can't reproduce locally, the bug is environmental — investigate the difference between environments first (config, data, versions, feature flags).
+If you can't reproduce locally, record the attempted steps and mark the cause unconfirmed. Investigate incomplete repro steps, intermittent behavior, and differences between environments (config, data, versions, feature flags) as hypotheses. Failure to reproduce alone does not establish an environmental cause.
 
 If you CAN reproduce, note the exact command / URL / input that triggers it. This is your test oracle for the rest of the debug session.
 
@@ -89,9 +89,9 @@ Evidence: <what you observed that proves or disproves>
 
 ### Step 5 — Narrow or pivot
 
-- **If CONFIRMED:** you found the cause. Skip to Step 7.
+- **If CONFIRMED:** proceed to Step 6 and demonstrate a failing regression test before the Step 7 fix.
 - **If DENIED:** form a new hypothesis based on what you learned. The new hypothesis should narrow the search, not restart it.
-- **If INCONCLUSIVE:** your experiment was flawed. Redesign it.
+- **If INCONCLUSIVE:** record what the experiment could not establish. Check for missing observations, intermittent behavior, or experiment limitations, then refine the experiment or gather more evidence. Keep the hypothesis unconfirmed.
 
 Repeat Steps 3–5. **Maximum 3 hypotheses before re-assessing.** If you've burned 3 hypotheses and still don't know:
 - Stop
@@ -100,7 +100,7 @@ Repeat Steps 3–5. **Maximum 3 hypotheses before re-assessing.** If you've burn
 - Ask: is there a different interpretation of the symptom?
 - Consider: is the repro actually what the user reported, or something similar-looking?
 
-If re-assessment doesn't help, escalate to the user or pair with a different angle (fresh read of the relevant files, grep for recent similar bugs in `.platform/log.md`).
+If re-assessment doesn't help, escalate to the user or pair with a different angle (fresh read of the relevant files, grep for recent similar bugs in `.platform/memory/log.md`).
 
 ### Step 6 — Write the regression test
 
@@ -115,7 +115,7 @@ Fix the cause you confirmed, not the symptom. Examples:
 - **Root fix (good):** find out why the value is null and fix that
 
 If the root cause is too deep to fix now, the symptom fix is acceptable **only** if:
-1. You document the root cause in `.platform/decisions.md` as deferred
+1. You document the root cause in `.platform/memory/decisions.md` as deferred
 2. You add a TODO at the site with a reference to the decision
 3. You add a test for the symptom
 
@@ -125,14 +125,16 @@ Run the regression test — it should now pass.
 Run the surrounding test suite — nothing else should break.
 Re-run the original repro steps — the bug should be gone.
 
+Report each check as passed, failed, or not run, with evidence or the reason it could not run. If the original repro cannot be exercised, mark that verification unavailable; do not claim the bug is verified fixed.
+
 ### Step 9 — Log the debug session
 
-Append to `.platform/log.md`:
+Append to `.platform/memory/log.md`:
 ```
-YYYY-MM-DD — debug: <bug title> — fixed root cause: <what it was> — <takeaway / prevention rule>
+YYYY-MM-DD — debug: <bug title> — <verified fix / mitigated / unresolved / fix unverified>: <evidence or limitation> — <takeaway / next step>
 ```
 
-If the takeaway is important enough that future sessions should know, add a row to `.platform/decisions.md` or `.platform/conventions/*.md` with the prevention rule.
+If the takeaway is important enough that future sessions should know, add a row to `.platform/memory/decisions.md` or `.platform/conventions/*.md` with the prevention rule.
 
 ## Output format
 
@@ -145,30 +147,31 @@ Expected: ...
 Repro: ...
 Environment: ...
 
-### Repro status: CONFIRMED locally
+### Repro status: <CONFIRMED locally / NOT REPRODUCED / NOT RUN — reason>
 
 ### Hypotheses tried
 1. <hypothesis 1> — DENIED (evidence)
 2. <hypothesis 2> — CONFIRMED (evidence)
 
 ### Root cause
-<one-sentence cause>
+<evidence-backed cause, or UNCONFIRMED with remaining hypotheses>
 
 ### Fix
 - <file:line change>
 - regression test: <file>
+<or: no fix — unresolved>
 
 ### Verification
-- regression test: ✓
-- surrounding tests: ✓
-- manual repro: ✓ (no longer reproduces)
+- regression test: <passed / failed / not run — evidence or reason>
+- surrounding tests: <passed / failed / not run — evidence or reason>
+- original repro: <fixed / still reproduces / not run — evidence or reason>
 
-### Logged to .platform/log.md: ✓
+### Logged to .platform/memory/log.md: ✓
 ```
 
 ## Red flags — stop and ask
 
-- **You can't reproduce locally.** Debug the environment first, not the code.
+- **You can't reproduce locally.** Keep the cause unconfirmed and investigate the repro and available evidence; ask for missing access or details if they block progress.
 - **You've burned 3 hypotheses and are about to guess a 4th.** Stop. Re-read. Reconsider the problem.
 - **The fix works but you can't explain why.** Do not ship. The bug will come back.
 - **The fix involves `try/except Exception: pass`.** Almost always wrong.
@@ -188,7 +191,7 @@ Environment: ...
 
 - **Upstream:** called by `ab-qa` when a finding needs root-cause work, by `ab-workflow` when Stage 5 hits a bug, or directly
 - **Calls:** `ab-test-writer` for the regression test
-- **Downstream:** writes to `.platform/log.md`, optionally `.platform/decisions.md` / `conventions/*.md`
+- **Downstream:** writes to `.platform/memory/log.md`, optionally `.platform/memory/decisions.md` / `conventions/*.md`
 
 ## Anti-patterns
 
