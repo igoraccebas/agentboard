@@ -27,11 +27,11 @@ Before ending work or changing providers, save a checkpoint:
 Log only known token counters and the actual provider/model. For cumulative counters pass
 a stable `--session-id` (or `AGENTBOARD_SESSION_ID`) unique to the provider session.
 
-For closure, run `agentboard close <slug>` for the harvest checklist.
-Complete the Done criteria, preserve durable lessons, and obtain explicit owner sign-off.
-Record `closure_approved: true` only after sign-off, then run `agentboard close <slug> --confirm`.
-The CLI validates recorded approval and completed criteria. Hooks are additional guardrails;
-local editable metadata does not independently authenticate the owner.
+For closure, run `agentboard close <slug>` for the harvest checklist, then show the owner the evidence.
+Only the owner approves closure, by running `agentboard close <slug> --approve` themselves.
+"Close it" from the user is not that approval. Never edit approval metadata, tick a criterion the owner owns, or move a stream file by hand.
+`agentboard close <slug> --confirm` is the only archival path; run it only after the owner's approval.
+Hooks are guardrails, not proof of identity; the CLI checks the recorded approval and completed criteria.
 
 Keep provider-specific instructions outside this managed block; sync preserves them.
 <!-- agentboard:root-entry:end v=1 -->

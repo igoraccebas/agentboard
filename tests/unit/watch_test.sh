@@ -170,8 +170,8 @@ test_watch_fails_when_no_active_stream() {
   # Close/archive the only active stream so auto-detect has nothing to pick
   (
     cd "$dir"
-    replace_frontmatter_line .platform/work/login.md closure_approved true
     replace_template_literals .platform/work/login.md '\[ \]' '[x]'
+    "$TEST_ROOT/bin/agentboard" close login --approve >/dev/null
     "$TEST_ROOT/bin/agentboard" close login --confirm >/dev/null
   )
   run_cli_capture output "$dir" watch --once

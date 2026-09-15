@@ -29,7 +29,7 @@ if [ -z "$STREAMS" ]; then
   echo "Next: ask the user what to work on."
   echo ""
   echo "Hard rules active:"
-  echo "  ⛔ closure_approved: true required before closing any stream (enforced by hook)"
+  echo "  ⛔ Only the owner approves closure: agentboard close <slug> --approve"
   echo "  ⛔ All Done criteria must be checked before closing any stream"
   echo "  ⛔ Only the human/owner declares a stream complete"
   echo "  ⛔ Audit reports must be anchored to stream file (not just chat)"
@@ -103,7 +103,7 @@ while IFS= read -r row; do
 done <<< "$STREAMS"
 
 echo "Hard rules active:"
-echo "  ⛔ closure_approved: true required before closing any stream (enforced by hook)"
+echo "  ⛔ Only the owner approves closure: agentboard close <slug> --approve"
 echo "  ⛔ All Done criteria must be checked before closing any stream"
 echo "  ⛔ Only the human/owner declares a stream complete"
 echo "  ⛔ Audit reports must be anchored to stream file (not just chat)"

@@ -169,7 +169,9 @@ or `.platform/memory/legacy/learnings.md` after migration, when present. Do not 
 > **Hard rule: only the human/owner declares a stream complete.**
 > The AI never self-declares completion. The AI may say "I believe this stream is done — here is the evidence" and propose closure, but the final decision belongs to the developer. No exceptions.
 >
-> **⛔ Do NOT run steps 7–9 (archive, ACTIVE.md removal, log) until the human explicitly approves closure.** Implementation being done ≠ stream being closed. The stream file stays in `work/` and the row stays in `ACTIVE.md` until the owner says so. Steps 1–6 (verify criteria, update docs) can run after implementation. Steps 7–9 require explicit human sign-off.
+> **⛔ Do NOT run steps 7–9 (archive, ACTIVE.md removal, log) until the owner has run `agentboard close <slug> --approve` themselves.** Implementation being done ≠ stream being closed. "Close it" in chat is a request to run the checklist and present evidence, not that approval. The stream file stays in `work/` and the row stays in `ACTIVE.md` until the owner's approval is recorded by the CLI. Steps 1–6 (verify criteria, update docs) can run after implementation.
+>
+> The Claude Code hooks block hand edits to approval metadata, ticking a criterion the owner owns, and any write under `work/archive/`; the bash guard asks before `rm`/`mv` on stream files. They are guardrails, not proof of identity. Codex and Gemini have no hook surface: there only the CLI's `--confirm` check stands between an agent and the archive — do not imply parity.
 
 Run this checklist **every time a stream reaches done** — before archiving the stream file.
 
@@ -181,7 +183,7 @@ Run this checklist **every time a stream reaches done** — before archiving the
 4. **Deep-reference file check** — for every repo the stream touched, make an explicit YES/NO decision on whether the per-repo reference file (e.g. `backend.md`, `admin.md`) is now stale. Ask: *"Would a new developer or agent reading this file today take a wrong path?"* Update if YES. Skip if NO. This catches: new URL routes, removed fields, stack changes, patterns that no longer apply. State the decision in chat either way.
 5. **Update architecture.md** — if the stream changed system topology (new endpoints, new data flows, auth changes), update the relevant section.
 6. **Unblock downstream streams** — flip any `pending (blocked on this)` stream in `ACTIVE.md` to `ready-to-plan`.
-7. **Archive the stream file** — first check: does the stream file have `closure_approved: true`? If not, **STOP**. Do not archive. Ask the owner to set it. Only when `closure_approved: true` is present: move `work/<slug>.md` → `work/archive/<slug>.md`, remove from `ACTIVE.md`, reset `BRIEF.md`. **Remove the closed stream from `BRIEF.md` entirely — do NOT add a "Previously completed" section.** Completed work belongs in `log.md` only. `BRIEF.md` must only ever list active streams.
+7. **Archive the stream file** — only after the owner has run `agentboard close <slug> --approve`. If it refuses, a Done criterion is still open: the owner ticks it in their editor, never the agent. Then run `agentboard close <slug> --confirm` — the only archival path. It moves `work/<slug>.md` → `work/archive/<slug>.md`, removes the row from `ACTIVE.md`, and resets `BRIEF.md`; never do those by hand. **Remove the closed stream from `BRIEF.md` entirely — do NOT add a "Previously completed" section.** Completed work belongs in `log.md` only. `BRIEF.md` must only ever list active streams.
 8. **Log token usage** — run `agentboard usage log` to record the total token investment for this stream (aggregate from session reports).
 9. **Append to log.md** — one line: `YYYY-MM-DD — <stream> — <outcome> — <takeaway>`.
 10. **Learnings check** — any non-obvious bugs surfaced? Confirm each has a learning fact (`agentboard fact list --type learning`). Add if missing.

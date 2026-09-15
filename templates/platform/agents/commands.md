@@ -53,10 +53,9 @@ When I say **"audit stream"**, you MUST:
 
 ### `archive stream`
 When I say **"archive stream"**, you MUST:
-1. **Verify** that `closure_approved: true` is present in the stream file.
+1. **Verify** that the owner has run `agentboard close <slug> --approve` (the CLI records it in the stream file). If not, stop and ask the owner — never record it yourself.
 2. **Update** `.platform/STATUS.md` and any relevant deep-reference files.
-3. **Log** the outcome in `.platform/memory/log.md`.
-4. **Move** the file to `.platform/work/archive/`.
+3. **Run** `agentboard close <slug> --confirm` — the only archival path. It moves the file, removes the `ACTIVE.md` row, and logs the outcome in `.platform/memory/log.md`. Never move the file by hand.
 
 ### `status check`
 When I say **"status check"**, you MUST:

@@ -25,6 +25,23 @@ for (const command of ['git commit -m x', 'git -C /tmp/repo commit -m x', 'git -
     assert(response.permissionDecisionReason);
   });
 }
+for (const command of ['rm .platform/work/widget.md', 'mv .platform/work/widget.md .platform/work/archive/widget.md', 'cp .platform/work/a.md .platform/work/archive/a.md', "sed -i.bak 's/planning/done/' .platform/work/a.md", 'echo done | tee .platform/work/a.md', 'echo x > .platform/work/a.md', 'agentboard close widget --approve']) {
+  test(`guard asks before touching stream files: ${command}`, () => {
+    const result = spawnSync('bash', [path.join(hooks, 'bash-guard.sh')], {input: JSON.stringify({tool_name:'Bash',tool_input:{command}}), encoding:'utf8'});
+    assert.strictEqual(result.status, 0);
+    const response = JSON.parse(result.stdout).hookSpecificOutput;
+    assert.strictEqual(response?.permissionDecision, 'ask');
+  });
+}
+test('guard stays silent for reads of stream files', () => {
+  const result = spawnSync('bash', [path.join(hooks, 'bash-guard.sh')], {input: JSON.stringify({tool_name:'Bash',tool_input:{command:'cat .platform/work/widget.md && grep -n status .platform/work/widget.md'}}), encoding:'utf8'});
+  assert.strictEqual(result.stdout, '');
+});
+test('closure approval prompt names OWNER approval', () => {
+  const result = spawnSync('bash', [path.join(hooks, 'bash-guard.sh')], {input: JSON.stringify({tool_name:'Bash',tool_input:{command:'agentboard close widget --approve'}}), encoding:'utf8'});
+  const response = JSON.parse(result.stdout).hookSpecificOutput;
+  assert(response.permissionDecisionReason.includes('OWNER approval'), response.permissionDecisionReason);
+});
 test('guard ignores other JSON fields', () => {
   const result = spawnSync('bash', [path.join(hooks, 'bash-guard.sh')], {input: JSON.stringify({tool_name:'Bash',tool_input:{command:'git status'},note:'git commit'}), encoding:'utf8'});
   assert.strictEqual(result.stdout, '');
@@ -43,7 +60,7 @@ function closure(tool_name, oldContent, newContent, streamContent, expected) {
   assert.strictEqual(result.status, expected, result.stdout + result.stderr);
   if (expected === 2) assert(result.stderr.includes('STREAM CLOSURE BLOCKED'));
 }
-const approved = 'closure_approved: true\n\n## Done criteria\n- [x] verified\n';
+const approved = 'closure_approved: true\napproved_by: owner\napproved_at: 2026-09-14 10:00:00 +0000\n\n## Done criteria\n- [x] verified\n';
 test('Write cannot remove unapproved stream', () => closure('Write',row,'', 'closure_approved: false',2));
 test('Edit cannot close row by changing its status', () => closure('Edit',row,row.replace('active','closed'), 'closure_approved: false',2));
 test('missing stream cannot establish approval', () => closure('Edit',row,'',null,2));

@@ -12,11 +12,17 @@ fixture() {
   printf '%s\n' '# Log' '---' > "$dir/.platform/memory/log.md"
 }
 
+approve_sample() {  # the owner's act, through the CLI
+  local approve_output
+  run_cli_capture approve_output "$1" close sample --approve
+  assert_status "$RUN_STATUS" 0
+}
+
 test_unapproved_close_has_no_side_effects() {
   local dir output; dir="$(mktemp -d)"; fixture "$dir"
   run_cli_capture output "$dir" close sample --confirm
   assert_status "$RUN_STATUS" 1
-  assert_contains "$output" 'closure_approved'
+  assert_contains "$output" 'close sample --approve'
   [[ -f "$dir/.platform/work/sample.md" ]] || fail 'unapproved stream archived'
   assert_file_contains "$dir/.platform/work/ACTIVE.md" '| sample |'
   [[ ! -d "$dir/.platform/work/archive" ]] || fail 'unapproved closure wrote archive'
@@ -24,7 +30,7 @@ test_unapproved_close_has_no_side_effects() {
 
 test_approved_close_rejects_unfinished_criteria() {
   local dir output; dir="$(mktemp -d)"; fixture "$dir"
-  replace_frontmatter_line "$dir/.platform/work/sample.md" closure_approved true
+  approve_sample "$dir"
   printf '%s\n' '- [ ] manual verification' >> "$dir/.platform/work/sample.md"
   run_cli_capture output "$dir" close sample --confirm
   assert_status "$RUN_STATUS" 1
@@ -33,7 +39,7 @@ test_approved_close_rejects_unfinished_criteria() {
 
 test_closure_refreshes_brief_and_dry_run_is_read_only() {
   local dir output; dir="$(mktemp -d)"; fixture "$dir"
-  replace_frontmatter_line "$dir/.platform/work/sample.md" closure_approved true
+  approve_sample "$dir"
   run_cli_capture output "$dir" close sample --confirm --dry-run
   assert_status "$RUN_STATUS" 0
   [[ ! -d "$dir/.platform/work/archive" ]] || fail 'dry-run created archive'
@@ -97,7 +103,7 @@ test_failed_restore_keeps_backup_indexes_aligned() {
 
 test_late_closure_failure_restores_every_state_file() (
   local dir file; dir="$(mktemp -d)"; fixture "$dir"
-  replace_frontmatter_line "$dir/.platform/work/sample.md" closure_approved true
+  approve_sample "$dir"
   cd "$dir"
   mkdir before
   for file in sample ACTIVE BRIEF; do cp ".platform/work/$file.md" "before/$file.md"; done

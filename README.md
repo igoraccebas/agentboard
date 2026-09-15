@@ -282,9 +282,22 @@ replace `sandbox_mode = "full"` with `"workspace-write"`, and remove obsolete
 model pins. `agentboard install-hooks --force` refreshes Claude settings with
 a backup; review the diff and retain any custom hooks.
 
-`close --confirm` requires recorded `closure_approved: true` after owner sign-off
-and no unchecked items in `## Done criteria`. It archives the stream, updates
-the registry and log, and clears BRIEF if that was the primary stream.
+Closure is a three-step ritual. `agentboard close <slug>` prints the harvest
+checklist. The **owner** then runs `agentboard close <slug> --approve`, which
+refuses while a Done criterion is open and otherwise records who approved and
+when — the only writer of that record. `close --confirm` requires that CLI
+record plus complete criteria, then archives the stream, updates the registry
+and log, and clears BRIEF if that was the primary stream. In Claude Code the
+closure gate blocks hand edits that grant approval, ticks of a criterion the
+owner owns, and any write under `work/archive/`; the bash guard asks before
+`rm`/`mv` on stream files and gives `--approve` its own prompt. An editable
+file still cannot prove identity: the goal is that an agent cannot approve by
+accident or by following instructions, and the owner sees one native prompt
+for the one command that grants it. Codex and Gemini have no hook surface —
+there only the `--confirm` check stands between an agent and the archive.
+Existing projects receive the hooks, protocol text, and banner through
+`agentboard update`; root entry files are not synced by `update`, so their
+managed block changes only through re-activation or `scripts/sync-context.sh`.
 Lifecycle writers (`new-stream`, `checkpoint`, `research`, `approve`, `progress`,
 and `close`) serialize their state updates. Multi-file closure and
 stream creation retain recovery snapshots until the operation succeeds.

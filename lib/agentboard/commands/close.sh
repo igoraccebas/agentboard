@@ -11,17 +11,19 @@ _cmd_close() {
       _close_print_help
       return 0
     else
-      die "Usage: agentboard close <stream-slug> [--confirm] [--dry-run]"
+      die "Usage: agentboard close <stream-slug> [--approve [--revoke]] [--confirm] [--dry-run]"
     fi
   fi
   shift
   [[ "$slug" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "Stream slug must be kebab-case."
 
-  local confirm=0 dry_run=0
+  local confirm=0 dry_run=0 approve=0 revoke=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --confirm) confirm=1; shift ;;
       --dry-run) dry_run=1; shift ;;
+      --approve) approve=1; shift ;;
+      --revoke)  revoke=1; shift ;;
       -h|--help) _close_print_help; return 0 ;;
       *) die "Unknown flag for close: $1" ;;
     esac
@@ -30,6 +32,15 @@ _cmd_close() {
   local stream_file="./.platform/work/${slug}.md"
   [[ -f "$stream_file" ]] || die "$stream_file not found."
   has_frontmatter "$stream_file" || die "$stream_file has no v1 frontmatter. Run 'agentboard migrate --apply' first."
+
+  if (( revoke && ! approve )); then
+    die "--revoke only makes sense with --approve: agentboard close $slug --approve --revoke"
+  fi
+  if (( approve )); then
+    (( ! confirm )) || die "Run --approve and --confirm as two separate commands."
+    _close_record_approval "$slug" "$stream_file" "$revoke"
+    return $?
+  fi
 
   if (( ! confirm )); then
     _close_print_harvest_prompt "$slug" "$stream_file"
@@ -51,12 +62,12 @@ _cmd_close() {
     return 0
   fi
 
-  [[ "$(frontmatter_value "$stream_file" closure_approved)" == true ]] ||
-    die "closure_approved must already be true after explicit owner sign-off."
-  if awk '/^## Done criteria[[:space:]]*$/ { in_section=1; next }
-    in_section && /^## / { exit }
-    in_section && /^[[:space:]]*[-*][[:space:]]+\[[[:space:]]\]/ { found=1 }
-    END { exit !found }' "$stream_file"; then
+  if [[ "$(frontmatter_value "$stream_file" closure_approved)" != true ||
+        -z "$(frontmatter_value "$stream_file" approved_by)" ||
+        -z "$(frontmatter_value "$stream_file" approved_at)" ]]; then
+    die "Closure approval was not recorded by the CLI. The owner runs: agentboard close $slug --approve"
+  fi
+  if [[ -n "$(_close_unchecked_criteria "$stream_file")" ]]; then
     die "Unchecked done criteria remain. Finish verification before closing."
   fi
 
@@ -84,11 +95,12 @@ _cmd_close() {
 
 _close_print_help() {
   cat <<'EOF'
-Usage: agentboard close <stream-slug> [--confirm] [--dry-run]
+Usage: agentboard close <stream-slug> [--approve [--revoke]] [--confirm] [--dry-run]
 
-Two-step stream closure. Default run prints the harvest checklist so the
-agent can distill this stream's contribution into project memory. Then
-run again with --confirm to archive the stream file and log closure.
+Three-step stream closure. The default run prints the harvest checklist so
+the agent can distill this stream's contribution into project memory. The
+OWNER then records approval with --approve. Finally --confirm archives the
+stream file and logs closure.
 
 Step 1 — harvest (no flag):
   Prints a checklist of what to extract from the stream and where to
@@ -96,21 +108,87 @@ Step 1 — harvest (no flag):
   learnings.md. The agent reads the checklist and writes those files
   itself using its Edit/Write tools.
 
-Step 2 — finalize (--confirm):
-  Moves the stream file to .platform/work/archive/<slug>.md
-  Requires pre-existing closure_approved: true and no unchecked done criteria
-  Sets status=done (does not grant approval)
-  Appends a closure row to .platform/memory/log.md
-  Removes the stream from work/ACTIVE.md
-  Clears BRIEF.md if it references this stream
+Step 2 — approve (--approve, run by the OWNER):
+  Refuses while any Done criterion is unchecked and lists the open ones —
+  the owner ticks them in their editor; the agent never does.
+  Records the approval in the stream file with who approved and when.
+  In Claude Code the bash guard turns this command into a native prompt
+  that names what is being granted. Agents must not run it on the
+  owner's behalf; "close it" in chat is a request, not this approval.
+  --approve --revoke withdraws a recorded approval.
+
+Step 3 — finalize (--confirm):
+  Requires the approval recorded by --approve and no unchecked done criteria
+  Moves the stream file to .platform/work/archive/<slug>.md — the only
+  archival path; never mv the file or edit ACTIVE.md by hand
+  Sets status=done, appends a closure row to .platform/memory/log.md,
+  removes the stream from work/ACTIVE.md, clears BRIEF.md if it pointed here
+
+Honest limit: an editable file cannot prove identity. The hooks make the
+approval impossible to grant by accident or by following instructions, and
+the owner sees one native prompt for the one command that grants it.
+Codex and Gemini have no hook surface: there, only the --confirm check
+stands between an agent and the archive.
 
 Flags:
-  --confirm   Actually archive + log. Run AFTER the harvest step.
+  --approve   Record the owner's approval (owner runs this).
+  --revoke    With --approve: withdraw the recorded approval.
+  --confirm   Actually archive + log. Run AFTER harvest and approval.
   --dry-run   Preview archive actions without writing.
 
 This is the compounding ritual: each close adds durable knowledge to the
 project's memory files so the next agent inherits it via `agentboard brief`.
 EOF
+}
+
+# _close_unchecked_criteria <stream_file>: prints the unchecked Done criteria.
+_close_unchecked_criteria() {
+  awk '/^## Done criteria[[:space:]]*$/ { in_section=1; next }
+    in_section && /^## / { exit }
+    in_section && /^[[:space:]]*[-*][[:space:]]+\[[[:space:]]\]/ { print }' "$1"
+}
+
+# _close_record_approval <slug> <stream_file> <revoke 0|1>
+# The owner's act: the only writer of the approval record. Single-file write
+# under the state lock; refuses to approve past open criteria.
+_close_record_approval() {
+  local slug="$1" stream_file="$2" revoke="$3" open_items key
+  if (( revoke )); then
+    set_frontmatter_value "$stream_file" closure_approved false || return 1
+    for key in approved_by approved_at; do
+      _close_drop_frontmatter_key "$stream_file" "$key" || return 1
+    done
+    set_frontmatter_value "$stream_file" updated_at "$(today)" || return 1
+    ok "Closure approval for ${C_BOLD}${slug}${C_RESET} withdrawn."
+    return 0
+  fi
+  open_items="$(_close_unchecked_criteria "$stream_file")"
+  if [[ -n "$open_items" ]]; then
+    printf '%s\n' "$open_items" >&2
+    die "Unchecked done criteria remain in $stream_file — tick them in your editor, then approve again."
+  fi
+  set_frontmatter_value "$stream_file" closure_approved true || return 1
+  set_frontmatter_value "$stream_file" approved_by "${AGENTBOARD_APPROVER:-${USER:-unknown}}" || return 1
+  set_frontmatter_value "$stream_file" approved_at "$(date '+%Y-%m-%d %H:%M:%S %z')" || return 1
+  set_frontmatter_value "$stream_file" updated_at "$(today)" || return 1
+  ok "Closure approved for ${C_BOLD}${slug}${C_RESET} by ${AGENTBOARD_APPROVER:-${USER:-unknown}}. Criteria approved:"
+  awk '/^## Done criteria[[:space:]]*$/ { in_section=1; next }
+    in_section && /^## / { exit }
+    in_section && /^[[:space:]]*[-*][[:space:]]+\[[xX]\]/ { print "    " $0 }' "$stream_file"
+  say "  ${C_DIM}Next: agentboard close ${slug} --confirm${C_RESET}"
+}
+
+# _close_drop_frontmatter_key <file> <key>: remove a key from the leading
+# frontmatter block only; body text is never touched.
+_close_drop_frontmatter_key() {
+  local file="$1" key="$2" tmp
+  tmp="$(mktemp "$(dirname "$file")/.close.XXXXXX")" || return 1
+  awk -v key="$key" '
+    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; print; next }
+    in_fm && /^---[[:space:]]*$/ { in_fm = 0; print; next }
+    in_fm && (index($0, key ": ") == 1 || $0 == key ":") { next }
+    { print }' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+  mv "$tmp" "$file"
 }
 
 _close_print_harvest_prompt() {

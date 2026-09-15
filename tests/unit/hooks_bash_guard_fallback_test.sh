@@ -24,7 +24,9 @@ test_fallback_asks_for_sensitive_commands() {
   local command output
   for command in 'git commit -m x' 'git -C /tmp/repo push origin main' 'git reset HEAD --hard' \
     'git checkout -- file.txt' 'git branch feature -D' 'rm -rf ./build' \
-    'agentboard approve abc' 'agentboard close abc --confirm'; do
+    'agentboard approve abc' 'agentboard close abc --confirm' 'agentboard close abc --approve' \
+    'rm .platform/work/abc.md' 'mv .platform/work/abc.md .platform/work/archive/abc.md' \
+    'echo done > .platform/work/abc.md'; do
     output="$(run_guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$command\"}}")"
     assert_contains "$output" '"permissionDecision":"ask"'
     assert_contains "$output" '"hookEventName":"PreToolUse"'
@@ -33,7 +35,7 @@ test_fallback_asks_for_sensitive_commands() {
 
 test_fallback_stays_silent_for_ordinary_commands() {
   local command output
-  for command in 'git status' 'ls -la' 'rm ./one-file.txt' 'agentboard close abc'; do
+  for command in 'git status' 'ls -la' 'rm ./one-file.txt' 'agentboard close abc' 'cat .platform/work/abc.md'; do
     output="$(run_guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$command\"}}")"
     assert_eq "$output" ''
   done

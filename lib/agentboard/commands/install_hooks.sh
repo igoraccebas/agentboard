@@ -162,14 +162,18 @@ What gets installed:
   .platform/scripts/hooks/bash-guard.sh
       PreToolUse hook on the Bash tool. Intercepts `git commit`, `git push`,
       `git reset --hard`, `git checkout --`, `git branch -D`, `rm -rf`,
-      `agentboard approve` and `agentboard close --confirm`, and returns
+      `agentboard approve`, `agentboard close --confirm`, and any rm/mv/cp/
+      tee/sed -i/redirection touching .platform/work/, and returns
       `permissionDecision: ask` — Claude Code shows its native approval prompt.
+      `agentboard close --approve` gets its own prompt text naming what is
+      granted: OWNER approval to close a stream.
       Uses node when available; without node a coarse bash match still asks.
 
   .platform/scripts/hooks/platform-closure-gate.js
-      PreToolUse hook on Edit/Write. Blocks an ACTIVE.md edit that closes or
-      removes a stream row unless that stream file records
-      closure_approved: true and has no unchecked Done criteria.
+      PreToolUse hook on Edit/Write. Blocks: closing or removing an ACTIVE.md
+      row unless the CLI recorded the owner's approval and the Done criteria
+      are complete; hand edits that grant approval in a stream file; ticking
+      a criterion whose text names the owner; any write under work/archive/.
 
   .platform/scripts/hooks/platform-bootstrap.sh
       SessionStart hook. Prints the platform state (streams, gates, rules).

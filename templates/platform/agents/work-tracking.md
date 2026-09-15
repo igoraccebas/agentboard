@@ -92,16 +92,15 @@ No hard locks. The `Agent` column in `ACTIVE.md` is a soft signal:
 
 When all done criteria are met:
 1. Agent sets status → `awaiting-verification`
-2. Agent posts done-criteria checklist with ✅/❌ for each item
-3. **User confirms** — agent cannot self-approve
-4. On confirmation:
-   - Move `work/<slug>.md` → `work/archive/<slug>.md`
-   - Remove row from `ACTIVE.md`
-   - Append one line to `.platform/memory/log.md`
-   - Update `memory/` if anything learned should persist cross-session
+2. Agent posts done-criteria checklist with ✅/❌ for each item and runs `agentboard close <slug>` for the harvest checklist
+3. **Owner approves** by running `agentboard close <slug> --approve` themselves — the agent never records approval, never ticks a criterion the owner owns, and treats "close it" in chat as a request, not this approval
+4. After the owner's approval, run `agentboard close <slug> --confirm` — the only archival path. It moves `work/<slug>.md` → `work/archive/<slug>.md`, removes the row from `ACTIVE.md`, and appends the closure line to `.platform/memory/log.md`
+5. Update `memory/` if anything learned should persist cross-session
 
-Hard blocker:
-- The closure hook blocks removal from `ACTIVE.md` unless `closure_approved: true` is present and every item under `## Done criteria` is checked.
+Hard blockers (Claude Code hooks; Codex and Gemini rely on the CLI check alone):
+- The closure gate blocks closing or removing an `ACTIVE.md` row unless the CLI recorded the owner's approval and every item under `## Done criteria` is checked.
+- It also blocks hand edits that grant approval in a stream file, ticking a criterion whose text names the owner, and any write under `work/archive/`.
+- The bash guard asks before `rm`/`mv`/`cp`/`sed -i`/redirection touching `.platform/work/`.
 
 ## What NOT to put in a stream file
 

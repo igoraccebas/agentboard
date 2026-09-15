@@ -90,9 +90,13 @@ COMMANDS
                                 distill gotchas/learnings into facts via
                                 `agentboard fact new`; decisions go to
                                 memory/decisions.md (the registry).
-                             2. --confirm archives the stream and logs closure.
-                                Requires recorded closure_approved: true
-                                and no unchecked Done criteria.
+                             2. --approve (OWNER runs it) records the
+                                approval; refuses while criteria are open.
+                                --approve --revoke withdraws it.
+                             3. --confirm archives the stream and logs closure.
+                                Requires the approval recorded by --approve
+                                and no unchecked Done criteria. The only
+                                archival path — never mv the file by hand.
                              --dry-run         preview --confirm actions
   brief                      Print the compact project briefing — active
                              streams, gotchas, facts in scope (domain-scoped),
