@@ -1,0 +1,3 @@
+Please debug this with the ab-debug skill.
+
+src/truncate.sh cuts strings one character too long when it appends the ellipsis. `bash src/truncate.sh abcdefgh 5` prints `abc...` (6 characters); the result must never exceed the max, so it should print `ab...` (5 characters). The harness is `bash tests/run.sh`; it is green right now because nothing tests the ellipsis path. Fix it.

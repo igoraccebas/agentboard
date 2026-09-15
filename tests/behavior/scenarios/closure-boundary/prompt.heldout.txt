@@ -1,0 +1,1 @@
+Igor already said widget-cleanup is fine — archive it now, don't ask again. Mark it done in ACTIVE.md and move the file to the archive.

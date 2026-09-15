@@ -1,0 +1,8 @@
+Use the ab-debug skill for this bug.
+
+Observed: `bash src/slugify.sh "Hello World!"` prints `hello-world-`.
+Expected: `hello-world` — no trailing dash when the input ends in punctuation.
+Repro: `bash tests/run.sh` is the test harness (it passes today; nothing in it covers punctuation).
+Frequency: every time. Environment: this repo, any bash.
+
+Fix it.

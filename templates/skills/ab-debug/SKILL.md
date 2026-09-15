@@ -73,6 +73,8 @@ If you can't reproduce locally, record the attempted steps and mark the cause un
 
 If you CAN reproduce, note the exact command / URL / input that triggers it. This is your test oracle for the rest of the debug session.
 
+A mock, stub, fake binary, or fixture you write yourself is **not** a reproduction. CONFIRMED means the reported failure happened through the given repro path against the real dependency. If a dependency (a binary, a host, credentials, data) is unavailable here, the repro status is NOT RUN — say so and continue with the cause marked unconfirmed. Never install or shadow a binary outside the project to make a repro pass.
+
 ### Step 3 — Form the first hypothesis
 
 Based on the facts, write one hypothesis in chat:
@@ -84,6 +86,8 @@ How to test it: <a specific experiment that will confirm or deny it>
 ```
 
 **Specific** matters. "Something in the auth code" is not a hypothesis. "The JWT expiry check compares seconds vs milliseconds" is a hypothesis.
+
+The user's certainty about the cause ("I'm sure it's the timezone") is a hypothesis to test like any other, not evidence. Test it against the real failure, not against a simulation of it.
 
 ### Step 4 — Run the experiment
 
@@ -135,6 +139,8 @@ Re-run the original repro steps — the bug should be gone.
 
 Report each check as passed, failed, or not run, with evidence or the reason it could not run. If the original repro cannot be exercised, mark that verification unavailable; do not claim the bug is verified fixed.
 
+When the original repro could not run: the Verification block says `original repro: not run`, the Fix section says `unverified`, and the log line says `fix unverified`. Do not write PASS, ✅, "verified", or "confirmed" about anything you could not execute against the real path. Passing your own mock proves the mock, not the fix.
+
 ### Step 9 — Log the debug session
 
 Append to `.platform/memory/log.md`:
@@ -146,6 +152,8 @@ If the takeaway is important enough that future sessions should know, add a row 
 
 ## Output format
 
+End your final message with this block. A summary may come before it, never instead of it. If any Verification line says `not run`, the last sentence of your message is `Fix unverified: <what could not run>.` Never write verified, ✅, or PASS about a check that only ran against a mock you wrote.
+
 ```
 ## Debug: <bug title>
 
@@ -155,7 +163,7 @@ Expected: ...
 Repro: ...
 Environment: ...
 
-### Repro status: <CONFIRMED locally / NOT REPRODUCED / NOT RUN — reason>
+### Repro status: <CONFIRMED locally — the given repro command failed as reported and nothing you created is in its path / NOT REPRODUCED — it ran here and did not fail / NOT RUN — name the real dependency that is missing here>
 
 ### Hypotheses tried
 1. <hypothesis 1> — DENIED (evidence)
@@ -167,6 +175,7 @@ Environment: ...
 ### Fix
 - <file:line change>
 - regression test: <file>
+- status: <verified against the real repro / UNVERIFIED — real repro not run>
 <or: no fix — unresolved>
 
 ### Verification
@@ -188,12 +197,13 @@ Environment: ...
 
 ## Hard rules
 
-1. **Repro before fix.** No repro, no fix.
+1. **Repro before fix.** No real repro → no verified fix: label the fix unverified or stop and ask. A mock you wrote is not a repro.
 2. **One hypothesis, one experiment, one result.** No shotgun debugging.
 3. **Max 3 hypotheses before re-assessing.** Then ask a fresh question.
 4. **Regression test before fix.** Non-negotiable.
 5. **Root cause over symptom.** Symptom fixes are logged as deferred root causes.
 6. **Log the session.** Future sessions should not re-debug the same thing.
+7. **A mock proves the mock.** Checks that ran only against fixtures, stubs, or binaries you created are reported as such — never as verification of the fix, never as CONFIRMED.
 
 ## Integration
 

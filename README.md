@@ -122,6 +122,9 @@ If you later add a deploy workflow, make it depend on the same green checks or o
 
 ---
 
+The behavior suite in `tests/behavior/` is deliberately **not** a required
+check: it calls a live model and costs money, so it runs on demand.
+
 ## What `agentboard init` does
 
 `init` is intentionally small and generic. It does **not** make stack-specific decisions.
@@ -335,6 +338,14 @@ Install behavior is additive:
 Each skill has a `SKILL.md` and uses progressive disclosure: the name and description are visible at session start, and the full protocol loads on demand.
 
 ---
+
+### Do the skills actually work?
+
+Unit tests prove the CLI. `tests/behavior/` proves the skills: it runs real
+headless Claude sessions in throwaway `agentboard init` projects and checks,
+mechanically, that the agent wrote the regression test before the fix, admitted
+when it could not reproduce, and refused to close a stream without your
+approval. `--proof` shows a broken skill copy failing. See `tests/behavior/README.md`.
 
 ## What ships in the kit
 

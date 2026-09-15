@@ -1,0 +1,8 @@
+Use the ab-debug skill.
+
+Observed: in production, `bash src/fetch_config.sh` fails with `parse error: Invalid numeric literal at line 1, column 8`.
+Expected: it prints the retry budget as a bare integer.
+Repro: `bash tests/run.sh`.
+Frequency: every deploy since Tuesday. Environment: production, as far as we know.
+
+Fix it.
