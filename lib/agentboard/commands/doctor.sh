@@ -357,6 +357,28 @@ cmd_doctor() {
     fi
   fi
 
+  # Verification recipe (ab-verify): shape only, read-only, never an error.
+  local recipe="./.platform/conventions/verification.md"
+  if [[ -f "$recipe" ]]; then
+    local recipe_part missing_parts=""
+    for recipe_part in Launch Doctor Drive Evidence Cleanup; do
+      if ! grep -Eq "^## ${recipe_part}( |$)" "$recipe"; then
+        missing_parts="${missing_parts:+$missing_parts, }$recipe_part"
+      fi
+    done
+    if [[ -n "$missing_parts" ]]; then
+      warn "conventions/verification.md is missing recipe part(s): $missing_parts — run ab-verify create"
+      warnings=$((warnings + 1))
+    elif grep -q '{{' "$recipe"; then
+      warn "conventions/verification.md still has unfilled {{placeholders}} — finish ab-verify create"
+      warnings=$((warnings + 1))
+    else
+      ok "conventions/verification.md has all five recipe parts"
+    fi
+  else
+    printf '  %s·%s no verification recipe yet (optional — ab-verify create writes conventions/verification.md)\n' "$C_DIM" "$C_RESET"
+  fi
+
   if [[ -d "./.platform/memory/facts" ]]; then
     local fact_kind fact_msg fact_issues=0
     while IFS='|' read -r fact_kind fact_msg; do

@@ -1,7 +1,7 @@
 ---
 name: ab-qa
-description: "Quality assurance pass — manual or real-browser testing of a feature against acceptance criteria. Produces a pass/fail report with reproducible repro steps for any failures. Use before shipping any UI-visible change."
-argument-hint: "<feature or URL to test>"
+description: "Quality assurance pass — runs the real artifact on its own surface (browser, CLI, TUI, or API) against acceptance criteria, driven by the verification recipe ab-verify wrote. Produces a pass/fail report with reproducible repro steps for any failures. Use before shipping any user-visible change."
+argument-hint: "<feature, command, or URL to test>"
 allowed-tools:
   - Read
   - Bash
@@ -9,7 +9,7 @@ allowed-tools:
   - Glob
 ---
 
-# ab-qa — Real-browser / manual QA
+# ab-qa — QA on the real artifact
 
 ## Identity
 
@@ -21,30 +21,32 @@ ANSI terminal color: `\033[38;5;226m[ab-qa]\033[0m`
 
 ## Purpose
 
-Catch what unit tests can't:
-- Visual regressions
-- Interaction flows that only break in a real browser
-- Copy / UX issues
-- Accessibility failures
-- Cross-browser / mobile issues
+Catch what unit tests can't — behavior that only shows on the real surface:
+- Rendered UI: visual regressions, interaction flows, copy / UX, accessibility, cross-browser / mobile
+- CLI: real commands, their output, exit codes, and the files they leave behind
+- TUI: the rendered frame, key handling, resize behavior
+- API: real requests, status codes, response bodies, auth behavior
 - End-to-end flows that span multiple services
 
-This skill is for the **final pass before ship**. Unit tests should already be green.
+This skill is for the **final pass before ship**. Unit tests should already be green. The surface and the commands come from the recipe `ab-verify` wrote (`.platform/conventions/verification.md` + the domain's Verify rows) — you do not invent them.
 
 ## When to use
 
-- Before merging any UI-visible change
+- Before merging any user-visible change — UI, CLI output, TUI, or API contract
 - Before shipping a release
 - When a bug report says "it looks broken" (start with repro, then fix)
-- When `ab-workflow` Stage 6 reaches a task with a UI surface
+- When `ab-workflow` Stage 6 reaches a task with a user-facing surface
 
 ## When NOT to use
 
-- Pure backend changes with no UI effect (unit + integration tests are enough)
-- Internal refactors with no user-visible delta (use `ab-review` instead)
-- When you don't have a running instance to test against
+- Internal changes with no user-visible delta (unit + integration tests, then `ab-review`)
+- When there is no recipe and no way to run the artifact: run `ab-verify create` first, or say plainly what cannot be verified here
 
 ## Protocol
+
+### Step 0 — Identify the surface and load the recipe
+
+Read `.platform/conventions/verification.md` (Launch, Doctor, Drive, Evidence, Cleanup) and the `## Verify` rows of the domain you are testing. Decide the surface: **browser / GUI**, **CLI**, **TUI**, or **API**. Record in chat which Drive rows you will exercise. No recipe → run `ab-verify create` first, or state what cannot be verified and why. Never invent a start command or a selector the recipe does not have.
 
 ### Step 1 — Define acceptance criteria
 
@@ -57,23 +59,32 @@ If the criteria come from a user story / spec, paste them. If not, write them yo
 
 ### Step 2 — Set up the test environment
 
-Record in chat:
+Start the artifact with the recipe's Launch, confirm Doctor passes, then record in chat:
 ```
+Surface: browser / CLI / TUI / API
 Environment: local dev / staging / production
-URL: <base URL>
-Browser: <browser + version>
-Auth state: <logged in as? anonymous?>
-Data state: <fresh DB? seeded fixtures? production-like?>
+Entry: <base URL | binary + version + cwd | terminal size | base URL + client>
+Auth state: <logged in as? anonymous? token?>
+Data state: <fresh DB? seeded fixtures? temp dir? production-like?>
+Recipe rows: <which Drive rows from the domain's Verify table>
 ```
 
 Reproducibility matters. If the environment isn't recorded, the bug report can't be re-checked.
 
 ### Step 3 — Run the happy path
 
-Walk through the primary flow. For each step:
-1. State the action ("Click the 'Sign up' button")
-2. State the expected result ("Form appears with email + password fields")
-3. State the actual result ("Form appears, email field has autofocus")
+Walk through the primary flow using the Drive rows. For each step:
+1. State the action ("Click the 'Sign up' button" / "run `agentboard brief`" / "GET /v1/schedule")
+2. State the expected result — the row's Expected observable result
+3. State the actual result, with the evidence captured per the recipe:
+
+| Surface | Evidence to capture |
+|---|---|
+| browser | screenshot + the DOM/state change, only with a browser tool the project already has |
+| CLI | the exact command, stdout/stderr, exit code, and the files it changed |
+| TUI | the rendered frame (`--once` or scripted input) and exit code |
+| API | request, status code, response body |
+
 4. Mark pass / fail
 
 If any step fails, note it, continue the flow where possible, and come back for focused repro at the end.
@@ -88,7 +99,7 @@ Cover at least:
 - **Interrupted flow** — navigate away mid-action, come back, does state persist or reset correctly?
 - **Permission variations** — try as a different role, as a non-owner, as a guest
 
-### Step 5 — Accessibility spot check
+### Step 5 — Accessibility spot check (browser surfaces only; others write `n/a — <surface>`)
 
 - **Keyboard navigation:** can you complete the flow without a mouse?
 - **Tab order:** does it match visual order?
@@ -98,7 +109,7 @@ Cover at least:
 
 This is a spot check, not a full WCAG audit. Flag issues, don't block on them unless critical.
 
-### Step 6 — Mobile / responsive spot check
+### Step 6 — Mobile / responsive spot check (browser surfaces only)
 
 - **Narrow viewport (375px):** does the layout hold?
 - **Touch targets:** are buttons at least 44×44?
@@ -109,7 +120,8 @@ This is a spot check, not a full WCAG audit. Flag issues, don't block on them un
 ```
 ## QA report: <feature>
 
-Environment: <env + URL + browser + auth + data>
+Surface: <browser / CLI / TUI / API> · Recipe rows: <n>
+Environment: <env + entry + auth + data>
 Time: <timestamp>
 
 ### Acceptance criteria
@@ -134,7 +146,9 @@ Time: <timestamp>
 - Labels: ✓
 - Contrast: ✓
 
-### Mobile: ✓
+### Mobile: ✓ (or n/a — <surface>)
+
+### Evidence: <path from the recipe's Evidence part>
 
 ### Findings
 1. **<short title>** — severity: <critical/high/medium/low>
@@ -171,6 +185,7 @@ Time: <timestamp>
 
 - **No spec / no acceptance criteria.** Write them first with the user. Don't test against "it should work".
 - **You can't reproduce the environment.** Flag it — non-reproducible tests are worse than no tests.
+- **The recipe has no row for the feature.** Add it with `ab-verify maintain <domain>` before testing, or say the feature is unverified.
 - **You're testing your own code on your own machine.** Fine for dev, but cite it as a risk. Prefer a clean environment.
 - **The feature works but feels wrong.** Document the feeling with specifics ("I expected X, got Y"), don't hand-wave.
 
@@ -178,14 +193,14 @@ Time: <timestamp>
 
 1. **Acceptance criteria first.** No criteria = no test.
 2. **Repro steps for every failure.** Step-by-step, reproducible by a stranger.
-3. **Test in a real browser.** Not just curl. Not just unit tests. An actual rendered UI.
+3. **Test the real artifact on its own surface.** A rendered UI in a real browser for web; the real binary for CLI and TUI; real HTTP for an API. Not unit tests alone, never a mock you wrote.
 4. **Cover all 6 edge-case buckets.** Empty / error / loading / boundary / interrupted / permissions.
 5. **Record the environment.** Non-reproducible bugs are noise.
 6. **The verdict is one of three.** READY / NEEDS FIXES / BLOCKED. No "mostly ready".
 
 ## Integration
 
-- **Upstream:** called by `ab-workflow` Stage 6 for UI changes, or directly when shipping
+- **Upstream:** called by `ab-workflow` Stage 6 for user-visible changes, or directly when shipping; reads the recipe `ab-verify` wrote
 - **Downstream:** findings feed back to Stage 5 for fixes, or trigger a `ab-debug` pass for hard-to-repro bugs
 - **Sibling:** `ab-test-writer` writes the unit-test regression for any bug found here
 
@@ -195,4 +210,5 @@ Time: <timestamp>
 2. **Testing only the happy path.** Edge cases are where bugs live.
 3. **Flagging every polish issue as critical.** Keep the severity rubric honest.
 4. **Skipping the environment record.** Bugs that can't be reproduced get closed as "can't repro", wasting everyone's time.
-5. **Treating accessibility as optional.** Keyboard + labels are table stakes.
+5. **Treating accessibility as optional.** Keyboard + labels are table stakes on browser surfaces.
+6. **Testing a CLI or API "in your head".** Run the command, keep the output. The recipe tells you how.

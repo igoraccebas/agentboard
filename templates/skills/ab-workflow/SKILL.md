@@ -110,7 +110,7 @@ Implementation subagents write code and report back; do not instruct them to sta
 Parallelize verification. Fire in one round:
 - **Check A:** run tests (use the test runner from `conventions/testing.md`)
 - **Check B (if security-sensitive):** delegate to `ab-security`
-- **Check C (if UI-visible):** delegate to `ab-qa` for a real-browser pass
+- **Check C (if user-visible):** delegate to `ab-qa`, which drives the feature on its own surface (browser, CLI, TUI, API) from the `ab-verify` recipe
 - **Check D (always):** re-read the diff once for obvious bugs
 
 If any check fails, loop back to Stage 5.

@@ -146,7 +146,7 @@ Not dogmatic TDD. Optimize for: **clear contracts, regression safety, fast feedb
 Then verify in parallel:
 - Specialist A: run tests
 - Specialist B: security / code review pass (for anything security-sensitive)
-- Specialist C: real-browser QA (for UI changes)
+- Specialist C: `ab-qa` on the feature's own surface — browser, CLI, TUI, or API — driven by the recipe `ab-verify` wrote in `conventions/verification.md` (for any user-visible change)
 
 Then record the outcome and any durable lessons:
 

@@ -113,12 +113,23 @@ cmd_update() {
       sk_dst_x="$skills_dir_codex/$sk_name"
       local skill_updated=0
       for sk_dst in "$sk_dst_c" "$sk_dst_a" "$sk_dst_x"; do
-        [[ -d "$sk_dst" ]] || continue
+        # Refresh a skill the project has; add one it lacks (a skills dir that
+        # exists means the project opted into the pack — new skills join it).
+        [[ -d "$(dirname "$sk_dst")" ]] || continue
         if (( dry_run )); then
-          printf '  %s~%s skills/%s\n' "$C_YELLOW" "$C_RESET" "$sk_name"
+          if [[ -d "$sk_dst" ]]; then
+            printf '  %s~%s skills/%s\n' "$C_YELLOW" "$C_RESET" "$sk_name"
+          else
+            printf '  %s+%s skills/%s  %s(would add)%s\n' "$C_GREEN" "$C_RESET" "$sk_name" "$C_DIM" "$C_RESET"
+          fi
         else
-          cp -R "$sk_src/." "$sk_dst/"
-          printf '  %s↻%s %sskills/%s%s\n' "$C_GREEN" "$C_RESET" "$C_CYAN" "$sk_name" "$C_RESET"
+          if [[ -d "$sk_dst" ]]; then
+            cp -R "$sk_src/." "$sk_dst/"
+            printf '  %s↻%s %sskills/%s%s\n' "$C_GREEN" "$C_RESET" "$C_CYAN" "$sk_name" "$C_RESET"
+          else
+            mkdir -p "$sk_dst" && cp -R "$sk_src/." "$sk_dst/"
+            printf '  %s+%s %sskills/%s%s  %s(new)%s\n' "$C_GREEN" "$C_RESET" "$C_CYAN" "$sk_name" "$C_RESET" "$C_DIM" "$C_RESET"
+          fi
         fi
         skill_updated=1
         updated=$((updated + 1))
@@ -126,9 +137,9 @@ cmd_update() {
       # avoid double-counting when more than one skills dir exists
       if [[ $skill_updated -eq 1 ]]; then
         local skill_dir_count=0
-        [[ -d "$sk_dst_c" ]] && skill_dir_count=$((skill_dir_count + 1))
-        [[ -d "$sk_dst_a" ]] && skill_dir_count=$((skill_dir_count + 1))
-        [[ -d "$sk_dst_x" ]] && skill_dir_count=$((skill_dir_count + 1))
+        [[ -d "$skills_dir_claude" ]] && skill_dir_count=$((skill_dir_count + 1))
+        [[ -d "$skills_dir_agents" ]] && skill_dir_count=$((skill_dir_count + 1))
+        [[ -d "$skills_dir_codex" ]] && skill_dir_count=$((skill_dir_count + 1))
         if (( skill_dir_count > 1 )); then
           updated=$((updated - (skill_dir_count - 1)))
         fi

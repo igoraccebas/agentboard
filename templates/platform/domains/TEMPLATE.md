@@ -32,6 +32,14 @@ _2 sentences. Explain the user-facing outcome of this domain._
 
 - _Absolute or repo-relative file paths_
 
+## Verify (optional)
+
+_Runtime recipe rows for this domain's top user-facing features — written by `ab-verify`, read by `ab-qa`. Project-level Launch / Doctor / Cleanup live in `conventions/verification.md`._
+
+| Feature | Drive (exact command / route / selector) | Expected observable result | Evidence (path) |
+|---|---|---|---|
+| _feature_ | _how a user reaches it_ | _what a stranger can check_ | _`.platform/evidence/...`_ |
+
 ## Decisions locked
 
 - _3–5 constraints or choices that are not up for re-litigation during normal feature work_

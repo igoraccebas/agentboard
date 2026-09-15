@@ -31,5 +31,17 @@ test_hub_init_writes_hub_pack() {
   assert_file_contains "$dir/.platform/repos.md" "Repo ID"
 }
 
+test_init_installs_ab_verify_to_both_skill_dirs() {
+  local dir output
+  dir="$(mktemp -d)"
+  printf '{}\n' > "$dir/package.json"
+  run_and_capture output bash -lc "cd '$dir' && printf '\n\n' | '$TEST_ROOT/bin/agentboard' init"
+  [[ -f "$dir/.claude/skills/ab-verify/SKILL.md" ]] || fail "ab-verify not installed to .claude/skills"
+  [[ -f "$dir/.agents/skills/ab-verify/SKILL.md" ]] || fail "ab-verify not installed to .agents/skills"
+  assert_file_contains "$dir/.claude/skills/ab-verify/SKILL.md" "## Launch"
+  assert_file_contains "$dir/.platform/domains/TEMPLATE.md" "## Verify (optional)"
+}
+
 test_project_init_writes_single_repo_pack
 test_hub_init_writes_hub_pack
+test_init_installs_ab_verify_to_both_skill_dirs

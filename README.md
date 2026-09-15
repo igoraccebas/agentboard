@@ -341,6 +341,7 @@ manual boundary selection; sync never guesses which instructions may be replaced
 - `ab-qa`
 - `ab-review`
 - `ab-debug`
+- `ab-verify` — writes and maintains the runtime verification recipe (`conventions/verification.md` + per-domain Verify rows) that `ab-qa` drives from; `agentboard doctor` checks its shape
 
 Install behavior is additive:
 

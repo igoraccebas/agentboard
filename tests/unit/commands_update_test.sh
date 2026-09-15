@@ -56,8 +56,24 @@ test_update_skips_memory_placeholder_when_legacy_root_file_exists() {
   assert_contains "$output" "migrate-layout"
 }
 
+test_update_delivers_verify_section_and_ab_verify_skill() {
+  local dir output
+  dir="$(mktemp -d)"
+  printf '{}\n' > "$dir/package.json"
+  init_project_fixture "$dir"
+  # An older project: domain template without the Verify section, no ab-verify skill.
+  grep -v 'Verify' "$dir/.platform/domains/TEMPLATE.md" > "$dir/old-template.md"
+  mv "$dir/old-template.md" "$dir/.platform/domains/TEMPLATE.md"
+  rm -rf "$dir/.claude/skills/ab-verify" "$dir/.agents/skills/ab-verify"
+  run_cli_capture output "$dir" update
+  assert_contains "$output" "Update complete"
+  assert_file_contains "$dir/.platform/domains/TEMPLATE.md" "## Verify (optional)"
+  [[ -f "$dir/.claude/skills/ab-verify/SKILL.md" ]] || fail "update did not deliver ab-verify"
+}
+
 test_update_dry_run_leaves_files_unchanged
 test_update_replaces_process_files_but_keeps_learnings
+test_update_delivers_verify_section_and_ab_verify_skill
 test_update_skips_memory_placeholder_when_legacy_root_file_exists
 
 test_update_installs_planner_agent_when_missing() {

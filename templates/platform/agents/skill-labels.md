@@ -17,9 +17,10 @@ This makes it immediately clear which skill is active during multi-skill workflo
 | ab-architect | `[ab-architect]` | 141 (purple) | System / component design |
 | ab-test-writer | `[ab-test-writer]` | 120 (green) | Unit test generation |
 | ab-security | `[ab-security]` | 196 (red) | Security audit |
-| ab-qa | `[ab-qa]` | 226 (yellow) | Manual / browser QA |
+| ab-qa | `[ab-qa]` | 226 (yellow) | QA on the real artifact (browser / CLI / TUI / API) |
 | ab-review | `[ab-review]` | 183 (lavender) | Pre-PR code review |
 | ab-debug | `[ab-debug]` | 208 (amber) | Root-cause bug investigation |
+| ab-verify | `[ab-verify]` | 51 (cyan) | Runtime verification recipes (create / maintain) |
 
 ## Rendering
 
